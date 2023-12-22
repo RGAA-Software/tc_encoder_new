@@ -16,6 +16,6 @@ add_library(tc_encoder ${SRCS})
 target_link_libraries(tc_encoder yuv)
 target_include_directories(tc_encoder PRIVATE ${FFMPEG_INCLUDE_DIRS})
 target_link_directories(tc_encoder PRIVATE ${FFMPEG_LIBRARY_DIRS})
-target_link_libraries(tc_encoder ${FFMPEG_LIBRARIES})
+target_link_libraries(tc_encoder ${FFMPEG_LIBRARIES} tc_opus_codec)
 
 add_subdirectory(tests)
