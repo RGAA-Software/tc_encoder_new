@@ -4,6 +4,7 @@
 
 #include "video_encoder_factory.h"
 #include "ffmpeg_video_encoder.h"
+#include "tc_common/log.h"
 
 #include <memory>
 
@@ -32,6 +33,7 @@ namespace tc
                 return nullptr;
             }
             else if (name == CreateEncoderName::kFFmpeg) {
+                LOGI("Finally, select FFmpeg as encoder.");
                 return std::make_shared<FFmpegVideoEncoder>(params);
             }
         }

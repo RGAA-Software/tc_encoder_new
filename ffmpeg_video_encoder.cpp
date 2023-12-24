@@ -24,6 +24,8 @@ namespace tc
         auto encoder_id = encoder_params_.format_ == VideoEncoderFormat::kHEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264;
         const AVCodec* encoder = avcodec_find_encoder(encoder_id);
 
+//        encoder = avcodec_find_encoder_by_name("libx265");
+
         //初始化并设置编码器上下文
         context_ = avcodec_alloc_context3(encoder);
         if (!context_) {
@@ -35,11 +37,12 @@ namespace tc
         context_->time_base = { 1, 60 };
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
         context_->thread_count = 4;
+        context_->gop_size = 60;
 
         //编码器初始化
         auto ret = avcodec_open2(context_, encoder, NULL);
         if (ret != 0) {
-            LOGE("avcodec_open2 error !");
+            LOGE("avcodec_open2 error : {}", ret);
             return false;
         }
 
@@ -101,6 +104,12 @@ namespace tc
 
             av_packet_unref(packet_);
         }
+    }
+
+    void FFmpegVideoEncoder::Exit() {
+        VideoEncoder::Exit();
+
+
     }
 
 }

@@ -40,6 +40,7 @@ namespace tc
         virtual void Encode(uint64_t handle, uint64_t frame_index);
         // 编码RGBA格式的图片，用于FFmpeg/VP9
         virtual void Encode(const std::shared_ptr<Image>& i420_data, uint64_t frame_index);
+        virtual void Exit();
 
     protected:
         VideoEncoderParams encoder_params_{};

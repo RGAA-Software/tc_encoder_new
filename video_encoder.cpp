@@ -34,4 +34,8 @@ namespace tc
     void VideoEncoder::Encode(const std::shared_ptr<Image>& i420_data, uint64_t frame_index) {
 
     }
+
+    void VideoEncoder::Exit() {
+
+    }
 }

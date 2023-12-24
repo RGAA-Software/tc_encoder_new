@@ -21,7 +21,8 @@ namespace tc
         ~FFmpegVideoEncoder() override;
 
         bool Init() override;
-        void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index);
+        void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) override;
+        void Exit() override;
 
     private:
 
