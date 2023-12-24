@@ -38,6 +38,8 @@ namespace tc
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
         context_->thread_count = 4;
         context_->gop_size = 60;
+        context_->bit_rate = 20000000;
+        context_->max_b_frames = 0;
 
         //编码器初始化
         auto ret = avcodec_open2(context_, encoder, NULL);
