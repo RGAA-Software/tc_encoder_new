@@ -36,9 +36,9 @@ namespace tc
         context_->height = this->encoder_params_.height_;
         context_->time_base = { 1, 60 };
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
-        context_->thread_count = 4;
+        context_->thread_count = (int)std::thread::hardware_concurrency();
         context_->gop_size = 60;
-        context_->bit_rate = 20000000;
+        context_->bit_rate = 10000000;
         context_->max_b_frames = 0;
 
         //编码器初始化
