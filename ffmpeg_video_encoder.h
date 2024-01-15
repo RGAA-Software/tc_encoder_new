@@ -14,22 +14,20 @@ extern "C" {
 
 namespace tc
 {
-
     class FFmpegVideoEncoder : public VideoEncoder {
     public:
-        explicit FFmpegVideoEncoder(const VideoEncoderParams& params);
+        FFmpegVideoEncoder(const EncoderFeature& encoder_feature);
         ~FFmpegVideoEncoder() override;
 
-        bool Init() override;
+        bool Initialize(const tc::EncoderConfig& config) override;
+        //bool Init() override;
         void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) override;
         void Exit() override;
 
     private:
-
         AVCodecContext* context_ = nullptr;
         AVFrame* frame_ = nullptr;
         AVPacket* packet_ = nullptr;
-
     };
 
 }

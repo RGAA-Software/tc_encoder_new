@@ -13,12 +13,66 @@
 namespace tc
 {
 
-    FFmpegVideoEncoder::FFmpegVideoEncoder(const VideoEncoderParams& params) : VideoEncoder(params) {
+    FFmpegVideoEncoder::FFmpegVideoEncoder(const EncoderFeature& encoder_feature) : VideoEncoder(encoder_feature) {
 
     }
 
-    FFmpegVideoEncoder::~FFmpegVideoEncoder() {}
+    FFmpegVideoEncoder::~FFmpegVideoEncoder() {
 
+    }
+
+    bool FFmpegVideoEncoder::Initialize(const tc::EncoderConfig& encoder_config) {
+        VideoEncoder::Initialize(encoder_config);
+        //设置编码器
+        auto encoder_id = encoder_config.codec_type == EVideoCodecType::kHEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264;
+        const AVCodec* encoder = avcodec_find_encoder(encoder_id);
+
+//        encoder = avcodec_find_encoder_by_name("libx265");
+
+        //初始化并设置编码器上下文
+        context_ = avcodec_alloc_context3(encoder);
+        if (!context_) {
+            LOGE("avcodec_alloc_context3 error!");
+            return false;
+        }
+        context_->width = this->out_width_;
+        context_->height = this->out_height_;
+        context_->time_base = { 1, this->refresh_rate_ };
+        context_->pix_fmt = AV_PIX_FMT_YUV420P;
+        context_->thread_count = (int)std::thread::hardware_concurrency(); // 后续要注意 ，使用帧内多线程编码
+        context_->thread_type = FF_THREAD_SLICE; // 帧内多线程模式
+        context_->gop_size = encoder_config.gop_size;
+        if(-1 == encoder_config.gop_size) {
+            context_->gop_size = 60;
+        }
+        context_->bit_rate = encoder_config.bitrate;
+        context_->max_b_frames = 0;
+
+        //编码器初始化
+        auto ret = avcodec_open2(context_, encoder, NULL);
+        if (ret != 0) {
+            LOGE("avcodec_open2 error : {}", ret);
+            return false;
+        }
+
+        //初始化并设置 AV FRAME
+        frame_ = av_frame_alloc();
+        frame_->width = context_->width;
+        frame_->height = context_->height;
+        frame_->format = context_->pix_fmt;
+
+        //为AV FRAME分配缓冲区
+        av_frame_get_buffer(frame_, 0);
+
+        LOGI("Line 1: {} 2: {} 3: {}", frame_->linesize[0], frame_->linesize[1], frame_->linesize[2]);
+
+        //初始化AV PACKET
+        packet_ = av_packet_alloc();
+
+        return true;
+    }
+
+#if 0
     bool FFmpegVideoEncoder::Init() {
         //设置编码器
         auto encoder_id = encoder_params_.format_ == VideoEncoderFormat::kHEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264;
@@ -64,6 +118,7 @@ namespace tc
 
         return true;
     }
+#endif
 
     void FFmpegVideoEncoder::Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) {
         //

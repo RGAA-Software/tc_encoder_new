@@ -3,39 +3,206 @@
 //
 
 #include "video_encoder.h"
+#include "tc_common/string_ext.h"
 
 namespace tc
 {
 
-    VideoEncoder::VideoEncoder(const VideoEncoderParams& params) {
-        this->encoder_params_ = params;
-    }
+	VideoEncoder::VideoEncoder(const EncoderFeature& encoder_feature) {
+	    encoder_feature_ = encoder_feature;
+	    printf("adapter_uid_ = %llu\n", encoder_feature_.adapter_uid_);
+	    // 枚举所有的显卡,找到与adapter_uid匹配的显卡设备
+	    ComPtr<IDXGIFactory1> factory1;
+	    ComPtr<IDXGIAdapter1> adapter;
+	    DXGI_ADAPTER_DESC desc;
+	    HRESULT res = NULL;
+	    bool found_adapter = false;
+	    int adapter_index = 0;
+	    res = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(factory1.GetAddressOf()));
+	    if (res != S_OK) {
+	        printf("CreateDXGIFactory1 failed");
+	        return;
+	    }
+	    while (true) {
+	        res = factory1->EnumAdapters1(adapter_index, adapter.GetAddressOf());
+	        if (res != S_OK) {
+	            printf("EnumAdapters1 index:%d failed\n",adapter_index);
+	            return;
+	        }
+	        D3D_FEATURE_LEVEL featureLevel;
 
-    VideoEncoder::~VideoEncoder() {
+	        adapter->GetDesc(&desc);
+	        if(encoder_feature_.adapter_uid_ == desc.AdapterLuid.LowPart) {
+	            found_adapter = true;
+	            printf("Adapter Index:%d Name:%s", adapter_index, StringExt::ToUTF8(desc.Description).c_str());
+	            printf("find adapter\n");
+	            break;
+	        }
+	        ++adapter_index;
+	    }
 
-    }
+	    if(!found_adapter) {
+	        printf("can not found adapter\n");
+	        return;
+	    }
 
-    bool VideoEncoder::Init() {
-        return false;
-    }
+	    D3D_FEATURE_LEVEL featureLevel;
+	    // D3D11_CREATE_DEVICE_BGRA_SUPPORT 如果是其他颜色格式应该怎么传，如果是游戏画面这里怎么传呢
+	    res = D3D11CreateDevice(adapter.Get(),
+	                            D3D_DRIVER_TYPE_UNKNOWN, NULL,
+	                            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+	                            NULL, 0, D3D11_SDK_VERSION,
+	                            &d3d11_device_, &featureLevel, &d3d11_device_context_);
 
-    void VideoEncoder::InsertIDR() {
-        insert_idr_ = true;
-    }
+	    if (res != S_OK || !d3d11_device_) {
+	        printf("D3D11CreateDevice failed: %ld\n", res);
+	    } else {
+	        printf("D3D11CreateDevice mDevice = %p\n", d3d11_device_.Get());
+	    }
+	}
 
-    void VideoEncoder::RegisterEncodeCallback(EncoderCallback&& cbk) {
-        this->encoder_callback_ = std::move(cbk);
-    }
+	VideoEncoder::~VideoEncoder() {
 
-    void VideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
+	}
 
-    }
+	bool VideoEncoder::Initialize(const tc::EncoderConfig& config) {
+	    encoder_config_ = config;
+	    input_frame_width_ = config.width;
+	    input_frame_height_ = config.height;
+	    out_width_ = config.width;
+	    out_height_ = config.height;
+	    refresh_rate_ = config.fps;
+	    return true;
+	}
 
-    void VideoEncoder::Encode(const std::shared_ptr<Image>& i420_data, uint64_t frame_index) {
+	bool VideoEncoder::Init() {
+	    return false;
+	}
 
-    }
+	void VideoEncoder::InsertIDR() {
+	    insert_idr_ = true;
+	}
 
-    void VideoEncoder::Exit() {
+	void VideoEncoder::RegisterEncodeCallback(EncoderCallback&& cbk) {
+	    this->encoder_callback_ = std::move(cbk);
+	}
 
-    }
+	void VideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
+
+	}
+
+	void VideoEncoder::Encode(ID3D11Texture2D* tex2d) {
+
+	}
+
+	void VideoEncoder::Encode(const std::shared_ptr<Image>& i420_data, uint64_t frame_index) {
+
+	}
+
+	void VideoEncoder::Exit() {
+
+	}
+
+	bool VideoEncoder::D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d) {
+	    HRESULT hRes;
+	    ComPtr<IDXGIKeyedMutex> key_mutex;
+	    if (FAILED(hRes = texture2d.As<IDXGIKeyedMutex>(&key_mutex)))
+	    {
+	        printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
+	        return false;
+	    }
+	    if (FAILED(hRes = key_mutex->AcquireSync(0,INFINITE)))
+	    {
+	        printf("D3D11Texture2DReleaseMutex AcquireSync failed.\n");
+	        return false;
+	    }
+	    return  true;
+	}
+
+	bool VideoEncoder::D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d) {
+	    HRESULT hRes;
+	    ComPtr<IDXGIKeyedMutex> key_mutex;
+	    if(FAILED(hRes = texture2d.As<IDXGIKeyedMutex>(&key_mutex)))
+	    {
+	        printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
+	        return false;
+	    }
+	    if(FAILED(hRes = key_mutex->ReleaseSync(0)))
+	    {
+	        printf("D3D11Texture2DReleaseMutex ReleaseSync failed.\n");
+	        return false;
+	    }
+	}
+
+	bool VideoEncoder::CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture) {
+	    if(!D3D11Texture2DLockMutex(shared_texture)) {
+	        printf("D3D11Texture2DLockMutex error\n");
+	        return false;
+	    }
+	    std::shared_ptr<void> auto_realse_texture2D_mutex((void*)nullptr, [=](void* temp){
+	        D3D11Texture2DReleaseMutex(shared_texture);
+	    });
+
+	    HRESULT hRes;
+	    D3D11_TEXTURE2D_DESC desc;
+	    shared_texture->GetDesc(&desc);
+
+	    ComPtr<ID3D11Device> curDevice;
+	    shared_texture->GetDevice(&curDevice);
+
+	    if (texture2d_)
+	    {
+	        ComPtr<ID3D11Device> sharedTextureDevice;
+	        texture2d_->GetDevice(&sharedTextureDevice);
+	        if (sharedTextureDevice != curDevice) {
+	            texture2d_ = nullptr;
+	        }
+	        if (texture2d_)
+	        {
+	            D3D11_TEXTURE2D_DESC sharedTextureDesc;
+	            texture2d_->GetDesc(&sharedTextureDesc);
+	            if (desc.Width != sharedTextureDesc.Width ||
+	                desc.Height != sharedTextureDesc.Height ||
+	                desc.Format != sharedTextureDesc.Format)
+	            {
+	                texture2d_ = nullptr;
+	            }
+	        }
+	    }
+
+	    if (!texture2d_)
+	    {
+	        D3D11_TEXTURE2D_DESC createDesc;
+	        ZeroMemory(&createDesc, sizeof(createDesc));
+	        createDesc.Format = desc.Format;
+	        createDesc.Width = desc.Width;
+	        createDesc.Height = desc.Height;
+	        createDesc.MipLevels = 1;
+	        createDesc.ArraySize = 1;
+	        createDesc.SampleDesc.Count = 1;
+	        createDesc.Usage = D3D11_USAGE_DEFAULT;
+	        createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	        if (FAILED(hRes = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf())))
+	        {
+	            printf("desktop capture create texture failed with:%s", StringExt::GetErrorStr(hRes).c_str());
+	            return false;
+	        }
+	    }
+	    ComPtr<ID3D11DeviceContext> ctx;
+	    curDevice->GetImmediateContext(&ctx);
+	    ctx->CopyResource(texture2d_.Get(), shared_texture.Get());
+
+	    return true;
+	}
+
+
+	ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
+	    ComPtr<ID3D11Texture2D> sharedTexture;
+	    HRESULT hRes;
+	    if (FAILED(hRes = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf())))) {
+	        return nullptr;
+	    }
+	    return sharedTexture;
+	}
+
 }

@@ -6,10 +6,29 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(libyuv CONFIG REQUIRED)
 find_package(FFMPEG REQUIRED)
 
+set(NVSDK_VERSION
+    12
+)
+
+include(nvencoder/${NVSDK_VERSION}/CMakeLists.txt)
+
+include_directories(
+    nvencoder/${NVSDK_VERSION}
+)
+
+set(NVENCODER_SOURCES_LIST)
+
+foreach(item ${NVENCODER_SOURCES})
+    #message("Current item: ${item}")
+    list(APPEND NVENCODER_SOURCES_LIST "${item}")
+endforeach()
+
 set(SRCS
-        video_encoder.cpp
-        video_encoder_factory.cpp
-        ffmpeg_video_encoder.cpp
+    ${NVENCODER_SOURCES_LIST}
+    video_encoder.cpp
+    video_encoder_factory.cpp
+    ffmpeg_video_encoder.cpp
+    nvenc_video_encoder.cpp
 )
 
 add_library(tc_encoder ${SRCS})

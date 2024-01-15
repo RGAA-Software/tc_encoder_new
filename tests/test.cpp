@@ -34,7 +34,7 @@ TEST(Test_FFmpeg, encoder) {
         .height_ = image->height,
         .format_ = VideoEncoderFormat::kHEVC,
     };
-    auto encoder = VideoEncoderFactory::CreateEncoder(params, CreateEncoderPolicy::kSpecify, CreateEncoderName::kFFmpeg);
+    auto encoder = VideoEncoderFactory::CreateEncoder(params, ECreateEncoderPolicy::kSpecify, ECreateEncoderName::kFFmpeg);
     ASSERT_TRUE(encoder != nullptr);
     auto ok = encoder->Init();
     ASSERT_TRUE(ok);
