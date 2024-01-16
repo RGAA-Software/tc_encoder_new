@@ -16,7 +16,7 @@ namespace tc
 {
     class FFmpegVideoEncoder : public VideoEncoder {
     public:
-        FFmpegVideoEncoder(const EncoderFeature& encoder_feature);
+        FFmpegVideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature);
         ~FFmpegVideoEncoder() override;
 
         bool Initialize(const tc::EncoderConfig& config) override;

@@ -13,7 +13,8 @@
 namespace tc
 {
 
-    FFmpegVideoEncoder::FFmpegVideoEncoder(const EncoderFeature& encoder_feature) : VideoEncoder(encoder_feature) {
+    FFmpegVideoEncoder::FFmpegVideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature)
+        : VideoEncoder(msg_notifier, encoder_feature) {
 
     }
 

@@ -12,7 +12,7 @@ namespace tc {
 
 class NVENCVideoEncoder : public VideoEncoder {
 public:
-    NVENCVideoEncoder(const EncoderFeature& encoder_feature);
+    NVENCVideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature);
 
     ~NVENCVideoEncoder();
 

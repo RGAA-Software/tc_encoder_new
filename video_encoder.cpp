@@ -8,7 +8,8 @@
 namespace tc
 {
 
-	VideoEncoder::VideoEncoder(const EncoderFeature& encoder_feature) {
+	VideoEncoder::VideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature) {
+        msg_notifier_ = msg_notifier;
 	    encoder_feature_ = encoder_feature;
 	    printf("adapter_uid_ = %llu\n", encoder_feature_.adapter_uid_);
 	    // 枚举所有的显卡,找到与adapter_uid匹配的显卡设备

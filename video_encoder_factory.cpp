@@ -39,7 +39,11 @@ namespace tc
 	}
 #endif
 
-	std::shared_ptr<VideoEncoder> VideoEncoderFactory::CreateEncoder(EncoderFeature feature, ECreateEncoderPolicy policy, const EncoderConfig& config, ECreateEncoderName name)
+	std::shared_ptr<VideoEncoder> VideoEncoderFactory::CreateEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier,
+                                                                     EncoderFeature feature,
+                                                                     ECreateEncoderPolicy policy,
+                                                                     const EncoderConfig& config,
+                                                                     ECreateEncoderName name)
 	{
 	    std::shared_ptr<VideoEncoder> video_encoder;
 	    if (policy == ECreateEncoderPolicy::kAuto) {
@@ -54,7 +58,7 @@ namespace tc
 	            // 1. 12.0
 	            // 2. 8.1
 	            // return nullptr;
-	            video_encoder = std::make_shared<NVENCVideoEncoder>(feature);
+	            video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
 	            if(!video_encoder->Initialize(config)) {
 	                printf("NVENCVideoEncoder Initialize error\n");
 	                return nullptr;
@@ -65,7 +69,7 @@ namespace tc
 	        }
 	        else if (name == ECreateEncoderName::kFFmpeg) {
 	            LOGI("Finally, select FFmpeg as encoder.");
-	            video_encoder = std::make_shared<FFmpegVideoEncoder>(feature);
+	            video_encoder = std::make_shared<FFmpegVideoEncoder>(msg_notifier, feature);
 	            if(!video_encoder->Initialize(config)) {
 	                printf("FFmpegVideoEncoder Initialize error\n");
 	                return nullptr;

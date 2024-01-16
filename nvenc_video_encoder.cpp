@@ -5,7 +5,8 @@
 namespace tc {
 
 
-NVENCVideoEncoder::NVENCVideoEncoder(const EncoderFeature& encoder_feature) : VideoEncoder(encoder_feature) {
+NVENCVideoEncoder::NVENCVideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature)
+    : VideoEncoder(msg_notifier, encoder_feature) {
 
 }
 

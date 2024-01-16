@@ -11,7 +11,7 @@
 namespace tc
 {
 
-
+    class MessageNotifier;
 
     enum class ECreateEncoderPolicy {
         // 自动选择编码器
@@ -39,7 +39,10 @@ namespace tc
 
         // adapter_uid_ 显卡适配器ID, 后期，如果同一个显卡，编码多个桌面画面的话，还要区分下桌面索引
         static std::shared_ptr<VideoEncoder> CreateEncoder(
-                EncoderFeature feature, ECreateEncoderPolicy policy, const EncoderConfig& config, ECreateEncoderName name = ECreateEncoderName::kUnknownEncoder
+                const std::shared_ptr<MessageNotifier>& msg_notifier,
+                EncoderFeature feature, ECreateEncoderPolicy policy,
+                const EncoderConfig& config,
+                ECreateEncoderName name = ECreateEncoderName::kUnknownEncoder
         );
     };
 

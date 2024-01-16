@@ -20,6 +20,7 @@ namespace tc
 	using namespace Microsoft::WRL;
 
 	class Image;
+    class MessageNotifier;
 
 	enum VideoEncoderFormat {
 	    kH264,
@@ -39,7 +40,7 @@ namespace tc
 	class VideoEncoder {
 	public:
 	    // 是显卡适配器设备唯一标识符
-	    VideoEncoder(const EncoderFeature& encoder_feature);
+	    VideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature);
 	    virtual ~VideoEncoder();
 
 	    virtual bool Initialize(const tc::EncoderConfig& config);
@@ -69,6 +70,8 @@ namespace tc
 	    //VideoEncoderParams encoder_params_{};
 	    EncoderCallback encoder_callback_;
 	    bool insert_idr_ = false;
+
+        std::shared_ptr<MessageNotifier> msg_notifier_ = nullptr;
 
 	    //显卡设备相关：
 	    ComPtr<ID3D11Device> d3d11_device_;
