@@ -4,6 +4,9 @@
 
 #include "video_encoder.h"
 #include "tc_common/string_ext.h"
+#include "tc_common/message_notifier.h"
+#include "tc_encoder/encoder_messages.h"
+#include "tc_common/log.h"
 
 namespace tc
 {
@@ -60,6 +63,9 @@ namespace tc
 	    } else {
 	        printf("D3D11CreateDevice mDevice = %p\n", d3d11_device_.Get());
 	    }
+
+        //
+        ListenMessages();
 	}
 
 	VideoEncoder::~VideoEncoder() {
@@ -133,6 +139,7 @@ namespace tc
 	        printf("D3D11Texture2DReleaseMutex ReleaseSync failed.\n");
 	        return false;
 	    }
+        return true;
 	}
 
 	bool VideoEncoder::CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture) {
@@ -205,5 +212,13 @@ namespace tc
 	    }
 	    return sharedTexture;
 	}
+
+    void VideoEncoder::ListenMessages() {
+        msg_listener_ = msg_notifier_->CreateListener();
+        msg_listener_->Listen<MsgInsertIDR>([=, this](const auto& msg) {
+            LOGI("====> OK, received IDR message....");
+            this->InsertIDR();
+        });
+    }
 
 }

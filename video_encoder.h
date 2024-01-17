@@ -21,6 +21,7 @@ namespace tc
 
 	class Image;
     class MessageNotifier;
+    class MessageListener;
 
 	enum VideoEncoderFormat {
 	    kH264,
@@ -58,6 +59,11 @@ namespace tc
 
 	    EncoderConfig encoder_config_;
 	    EncoderFeature encoder_feature_;
+
+    private:
+
+        void ListenMessages();
+
 	protected:
 	    int refresh_rate_ = 0;
 	    int input_frame_width_ = 0;
@@ -72,6 +78,7 @@ namespace tc
 	    bool insert_idr_ = false;
 
         std::shared_ptr<MessageNotifier> msg_notifier_ = nullptr;
+        std::shared_ptr<MessageListener> msg_listener_ = nullptr;
 
 	    //显卡设备相关：
 	    ComPtr<ID3D11Device> d3d11_device_;
