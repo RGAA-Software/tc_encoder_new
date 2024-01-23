@@ -111,14 +111,16 @@ namespace tc
 	}
 
 	bool VideoEncoder::D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d) {
-	    HRESULT hRes;
+	    HRESULT hres;
 	    ComPtr<IDXGIKeyedMutex> key_mutex;
-	    if (FAILED(hRes = texture2d.As<IDXGIKeyedMutex>(&key_mutex)))
+        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
+	    if (FAILED(hres))
 	    {
 	        printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
 	        return false;
 	    }
-	    if (FAILED(hRes = key_mutex->AcquireSync(0,INFINITE)))
+        hres = key_mutex->AcquireSync(0,INFINITE);
+	    if (FAILED(hres))
 	    {
 	        printf("D3D11Texture2DReleaseMutex AcquireSync failed.\n");
 	        return false;
@@ -127,14 +129,16 @@ namespace tc
 	}
 
 	bool VideoEncoder::D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d) {
-	    HRESULT hRes;
+	    HRESULT hres;
 	    ComPtr<IDXGIKeyedMutex> key_mutex;
-	    if(FAILED(hRes = texture2d.As<IDXGIKeyedMutex>(&key_mutex)))
+        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
+	    if(FAILED(hres))
 	    {
 	        printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
 	        return false;
 	    }
-	    if(FAILED(hRes = key_mutex->ReleaseSync(0)))
+        hres = key_mutex->ReleaseSync(0);
+	    if(FAILED(hres))
 	    {
 	        printf("D3D11Texture2DReleaseMutex ReleaseSync failed.\n");
 	        return false;
@@ -151,7 +155,7 @@ namespace tc
 	        D3D11Texture2DReleaseMutex(shared_texture);
 	    });
 
-	    HRESULT hRes;
+	    HRESULT hres;
 	    D3D11_TEXTURE2D_DESC desc;
 	    shared_texture->GetDesc(&desc);
 
@@ -190,9 +194,10 @@ namespace tc
 	        createDesc.SampleDesc.Count = 1;
 	        createDesc.Usage = D3D11_USAGE_DEFAULT;
 	        createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	        if (FAILED(hRes = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf())))
+            hres = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf());
+	        if (FAILED(hres))
 	        {
-	            printf("desktop capture create texture failed with:%s", StringExt::GetErrorStr(hRes).c_str());
+	            printf("desktop capture create texture failed with:%s", StringExt::GetErrorStr(hres).c_str());
 	            return false;
 	        }
 	    }
@@ -206,8 +211,8 @@ namespace tc
 
 	ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
 	    ComPtr<ID3D11Texture2D> sharedTexture;
-	    HRESULT hRes;
-	    if (FAILED(hRes = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf())))) {
+	    HRESULT hres;
+	    if (FAILED(hres = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf())))) {
 	        return nullptr;
 	    }
 	    return sharedTexture;
