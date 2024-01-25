@@ -109,7 +109,7 @@ void NVENCVideoEncoder::Transmit(ID3D11Texture2D* pTexture,  bool insertIDR)
     d3d11_device_context_->CopyResource(pInputTexture, pTexture);
 
     NV_ENC_PIC_PARAMS picParams = {};
-    if (insertIDR || insert_idr_) {
+    if (/*insertIDR ||*/ insert_idr_) {
         printf("Inserting IDR frame.\n");
         picParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR;
         insert_idr_ = false;

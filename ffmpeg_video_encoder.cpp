@@ -24,6 +24,8 @@ namespace tc
 
     bool FFmpegVideoEncoder::Initialize(const tc::EncoderConfig& encoder_config) {
         VideoEncoder::Initialize(encoder_config);
+        ListCodecs();
+
         //设置编码器
         auto encoder_id = encoder_config.codec_type == EVideoCodecType::kHEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264;
         const AVCodec* encoder = avcodec_find_encoder(encoder_id);
@@ -40,9 +42,12 @@ namespace tc
         context_->height = this->out_height_;
         context_->time_base = { 1, this->refresh_rate_ };
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
-        context_->thread_count = (int)std::thread::hardware_concurrency(); // 后续要注意 ，使用帧内多线程编码
+        context_->thread_count = std::min((int)std::thread::hardware_concurrency()/2, X265_MAX_FRAME_THREADS); // 后续要注意 ，使用帧内多线程编码
         context_->thread_type = FF_THREAD_SLICE; // 帧内多线程模式
         context_->gop_size = encoder_config.gop_size;
+        context_->max_b_frames = 0;  // 最大 B 帧数
+        context_->bit_rate = 10000000; // 10Mbps
+
         if(-1 == encoder_config.gop_size) {
             context_->gop_size = 60;
         }
@@ -168,6 +173,24 @@ namespace tc
         VideoEncoder::Exit();
 
 
+    }
+
+    void FFmpegVideoEncoder::ListCodecs() {
+        const AVCodec *codec = NULL;
+        void *opaque = NULL;
+
+        // 使用 av_codec_iterate 遍历所有编解码器
+        LOGI("Available codecs:");
+        while ((codec = av_codec_iterate(&opaque)) != NULL) {
+            if (codec->type == AVMEDIA_TYPE_VIDEO || codec->type == AVMEDIA_TYPE_AUDIO) {
+                if (av_codec_is_encoder(codec)) {
+                    LOGI("Encoder: {}", codec->name);
+                }
+                if (av_codec_is_decoder(codec)) {
+                    //LOGI("Decoder: {}", codec->name);
+                }
+            }
+        }
     }
 
 }

@@ -5,12 +5,15 @@
 #ifndef TC_APPLICATION_VIDEO_ENCODER_FACTORY_H
 #define TC_APPLICATION_VIDEO_ENCODER_FACTORY_H
 
-#include "video_encoder.h"
+#include <memory>
+#include <string>
+#include <functional>
 #include "encoder_config.h"
 
 namespace tc
 {
 
+    class VideoEncoder;
     class MessageNotifier;
 
     enum class ECreateEncoderPolicy {

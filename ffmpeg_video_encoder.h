@@ -9,6 +9,7 @@
 
 extern "C" {
     #include "libavcodec/avcodec.h"
+    #include <x265.h>
 }
 
 
@@ -23,6 +24,9 @@ namespace tc
         //bool Init() override;
         void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) override;
         void Exit() override;
+
+    private:
+        void ListCodecs();
 
     private:
         AVCodecContext* context_ = nullptr;

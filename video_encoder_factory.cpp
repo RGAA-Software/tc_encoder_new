@@ -6,6 +6,7 @@
 #include "ffmpeg_video_encoder.h"
 #include "nvenc_video_encoder.h"
 #include "tc_common/log.h"
+#include "video_encoder.h"
 
 #include <memory>
 
@@ -47,22 +48,23 @@ namespace tc
 	{
 	    std::shared_ptr<VideoEncoder> video_encoder;
 	    if (policy == ECreateEncoderPolicy::kAuto) {
-	        // 1. nvenc 12.0
-	        // 2. nvenc 8.1
-	        // 3. amf
-	        // 4. ffmpeg
+            // 1. 12.0
+            // 2. 8.1
+            // return nullptr;
+            video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
+            if(!video_encoder->Initialize(config)) {
+                printf("NVENCVideoEncoder Initialize error\n");
+                return nullptr;
+            }
 	        return nullptr;
 	    }
 	    else {
 	        if (name == ECreateEncoderName::kNVENC) {
-	            // 1. 12.0
-	            // 2. 8.1
-	            // return nullptr;
-	            video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
-	            if(!video_encoder->Initialize(config)) {
-	                printf("NVENCVideoEncoder Initialize error\n");
-	                return nullptr;
-	            }
+                video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
+                if(!video_encoder->Initialize(config)) {
+                    printf("NVENCVideoEncoder Initialize error\n");
+                    return nullptr;
+                }
 	        }
 	        else if (name == ECreateEncoderName::kAMF) {
 	            return nullptr;

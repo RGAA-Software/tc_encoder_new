@@ -5,7 +5,7 @@
 #ifndef TC_APPLICATION_NVENC_VIDEO_ENCODER_H
 #define TC_APPLICATION_NVENC_VIDEO_ENCODER_H
 #include "video_encoder.h"
-#include "NvEncoderD3D11.h"
+#include "nvencoder/12/NvEncoderD3D11.h"
 #include <fstream>
 
 namespace tc {
