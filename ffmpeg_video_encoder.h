@@ -9,7 +9,7 @@
 
 extern "C" {
     #include "libavcodec/avcodec.h"
-    #include <x265.h>
+    //#include <x265.h>  // to do 这里暂时注释掉
 }
 
 
