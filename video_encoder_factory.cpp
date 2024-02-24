@@ -56,7 +56,7 @@ namespace tc
                 printf("NVENCVideoEncoder Initialize error\n");
                 return nullptr;
             }
-	        return nullptr;
+	        return video_encoder;
 	    }
 	    else {
 	        if (name == ECreateEncoderName::kNVENC) {
