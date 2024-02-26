@@ -14,7 +14,7 @@ namespace tc
 	VideoEncoder::VideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature) {
         msg_notifier_ = msg_notifier;
 	    encoder_feature_ = encoder_feature;
-	    printf("adapter_uid_ = %llu\n", encoder_feature_.adapter_uid_);
+	    LOGI("adapter_uid_ = {}", encoder_feature_.adapter_uid_);
 	    // 枚举所有的显卡,找到与adapter_uid匹配的显卡设备
 	    ComPtr<IDXGIFactory1> factory1;
 	    ComPtr<IDXGIAdapter1> adapter;
@@ -24,13 +24,13 @@ namespace tc
 	    int adapter_index = 0;
 	    res = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(factory1.GetAddressOf()));
 	    if (res != S_OK) {
-	        printf("CreateDXGIFactory1 failed");
+            LOGE("CreateDXGIFactory1 failed");
 	        return;
 	    }
 	    while (true) {
 	        res = factory1->EnumAdapters1(adapter_index, adapter.GetAddressOf());
 	        if (res != S_OK) {
-	            printf("EnumAdapters1 index:%d failed\n",adapter_index);
+                LOGE("EnumAdapters1 index:{} failed\n",adapter_index);
 	            return;
 	        }
 	        D3D_FEATURE_LEVEL featureLevel;
@@ -38,15 +38,15 @@ namespace tc
 	        adapter->GetDesc(&desc);
 	        if(encoder_feature_.adapter_uid_ == desc.AdapterLuid.LowPart) {
 	            found_adapter = true;
-	            printf("Adapter Index:%d Name:%s", adapter_index, StringExt::ToUTF8(desc.Description).c_str());
-	            printf("find adapter\n");
+	            LOGI("Adapter Index:{} Name: {}", adapter_index, StringExt::ToUTF8(desc.Description).c_str());
+	            LOGI("find adapter");
 	            break;
 	        }
 	        ++adapter_index;
 	    }
 
 	    if(!found_adapter) {
-	        printf("can not found adapter\n");
+	        LOGE("can not found adapter\n");
 	        return;
 	    }
 
@@ -59,9 +59,9 @@ namespace tc
 	                            &d3d11_device_, &featureLevel, &d3d11_device_context_);
 
 	    if (res != S_OK || !d3d11_device_) {
-	        printf("D3D11CreateDevice failed: %ld\n", res);
+	        LOGE("D3D11CreateDevice failed: {}", res);
 	    } else {
-	        printf("D3D11CreateDevice mDevice = %p\n", d3d11_device_.Get());
+            LOGI("D3D11CreateDevice mDevice = {}", (void*)d3d11_device_.Get());
 	    }
 
         //
