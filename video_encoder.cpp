@@ -219,11 +219,13 @@ namespace tc
 	}
 
     void VideoEncoder::ListenMessages() {
-        msg_listener_ = msg_notifier_->CreateListener();
-        msg_listener_->Listen<MsgInsertIDR>([=, this](const auto& msg) {
-            LOGI("====> OK, received IDR message....");
-            this->InsertIDR();
-        });
+        if (msg_notifier_) {
+            msg_listener_ = msg_notifier_->CreateListener();
+            msg_listener_->Listen<MsgInsertIDR>([=, this](const auto &msg) {
+                LOGI("====> OK, received IDR message....");
+                this->InsertIDR();
+            });
+        }
     }
 
 }
