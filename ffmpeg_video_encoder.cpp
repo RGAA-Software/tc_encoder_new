@@ -43,7 +43,7 @@ namespace tc
         context_->time_base = { 1, this->refresh_rate_ };
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
         //context_->thread_count = std::min((int)std::thread::hardware_concurrency()/2, X265_MAX_FRAME_THREADS); // 后续要注意 ，使用帧内多线程编码
-        context_->thread_count = (int)std::thread::hardware_concurrency();
+        context_->thread_count = std::min(16, (int)std::thread::hardware_concurrency());
         context_->thread_type = FF_THREAD_SLICE; // 帧内多线程模式
         context_->gop_size = encoder_config.gop_size;
         context_->max_b_frames = 0;  // 最大 B 帧数

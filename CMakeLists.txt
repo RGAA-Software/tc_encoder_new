@@ -31,6 +31,8 @@ set(SRCS
     nvenc_video_encoder.cpp
 )
 
+message(----> ${FFMPEG_LIBRARIES})
+
 add_library(tc_encoder ${SRCS})
 target_link_libraries(tc_encoder yuv)
 target_include_directories(tc_encoder PRIVATE ${FFMPEG_INCLUDE_DIRS})
