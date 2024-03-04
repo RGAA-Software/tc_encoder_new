@@ -46,39 +46,44 @@ namespace tc
                                                                      const EncoderConfig& config,
                                                                      ECreateEncoderName name)
 	{
-	    std::shared_ptr<VideoEncoder> video_encoder;
-	    if (policy == ECreateEncoderPolicy::kAuto) {
-            // 1. 12.0
-            // 2. 8.1
-            // return nullptr;
-            video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
-            if(!video_encoder->Initialize(config)) {
+        auto fn_create_ffmpeg = [=]() -> std::shared_ptr<VideoEncoder> {
+            LOGI("Finally, select FFmpeg as encoder.");
+            auto encoder = std::make_shared<FFmpegVideoEncoder>(msg_notifier, feature);
+            if(!encoder->Initialize(config)) {
+                printf("FFmpegVideoEncoder Initialize error\n");
+                return nullptr;
+            }
+            return encoder;
+        };
+
+        auto fn_create_nvenc = [=]() -> std::shared_ptr<VideoEncoder> {
+            auto encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
+            if(!encoder->Initialize(config)) {
                 printf("NVENCVideoEncoder Initialize error\n");
                 return nullptr;
             }
-	        return video_encoder;
+            return encoder;
+        };
+
+	    if (policy == ECreateEncoderPolicy::kAuto) {
+            auto encoder = fn_create_nvenc();
+            if (!encoder) {
+                encoder = fn_create_ffmpeg();
+            }
+            return encoder;
 	    }
 	    else {
 	        if (name == ECreateEncoderName::kNVENC) {
-                video_encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
-                if(!video_encoder->Initialize(config)) {
-                    printf("NVENCVideoEncoder Initialize error\n");
-                    return nullptr;
-                }
+                return fn_create_nvenc();
 	        }
 	        else if (name == ECreateEncoderName::kAMF) {
 	            return nullptr;
 	        }
 	        else if (name == ECreateEncoderName::kFFmpeg) {
-	            LOGI("Finally, select FFmpeg as encoder.");
-	            video_encoder = std::make_shared<FFmpegVideoEncoder>(msg_notifier, feature);
-	            if(!video_encoder->Initialize(config)) {
-	                printf("FFmpegVideoEncoder Initialize error\n");
-	                return nullptr;
-	            }
+                return fn_create_ffmpeg();
 	        }
 	    }
-	    return video_encoder;
+	    return nullptr;
 	}
 
 }

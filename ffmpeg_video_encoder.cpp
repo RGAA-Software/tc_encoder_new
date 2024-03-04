@@ -182,7 +182,7 @@ namespace tc
 
         // 使用 av_codec_iterate 遍历所有编解码器
         LOGI("Available codecs:");
-        while ((codec = av_codec_iterate(&opaque)) != NULL) {
+        while ((codec = av_codec_iterate(&opaque)) != nullptr) {
             if (codec->type == AVMEDIA_TYPE_VIDEO || codec->type == AVMEDIA_TYPE_AUDIO) {
                 if (av_codec_is_encoder(codec)) {
                     LOGI("Encoder: {}", codec->name);

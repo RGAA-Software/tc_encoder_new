@@ -1,6 +1,7 @@
 #include "nvenc_video_encoder.h"
 #include "tc_common/data.h"
 #include "tc_common/image.h"
+#include "tc_common/log.h"
 
 namespace tc {
 
@@ -42,8 +43,8 @@ bool NVENCVideoEncoder::Initialize(const tc::EncoderConfig& config)
     // ffmpeg 编码的时候，有奇偶数的问题，英伟达有没有，等确定下
     auto format = DxgiFormatToNvEncFormat(static_cast<DXGI_FORMAT>(config.texture_format));
     //MessageBoxA(0, "NvEncoderD3D11", "NvEncoderD3D11", 0);
-    printf("input_frame_width_ = %d, input_frame_height_ = %d, format = %d , m_pD3DRender->GetDevice() = %p\n",
-           input_frame_width_, input_frame_height_, format, d3d11_device_.Get());
+    LOGI("input_frame_width_ = {}, input_frame_height_ = {}, format = {:x} , m_pD3DRender->GetDevice() = {}",
+           input_frame_width_, input_frame_height_, (int)format, (void*)d3d11_device_.Get());
     try {
         nv_necoder_ = std::make_shared<NvEncoderD3D11>(d3d11_device_.Get(), input_frame_width_, input_frame_height_, format, 0);// 0 代表延迟
     }
