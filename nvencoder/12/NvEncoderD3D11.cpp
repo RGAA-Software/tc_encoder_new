@@ -24,16 +24,16 @@ DXGI_FORMAT GetD3D11Format(NV_ENC_BUFFER_FORMAT eBufferFormat)
 {
     switch (eBufferFormat)
     {
-    case NV_ENC_BUFFER_FORMAT_NV12:
-        return DXGI_FORMAT_NV12;
-    case NV_ENC_BUFFER_FORMAT_ARGB:
-        return DXGI_FORMAT_B8G8R8A8_UNORM;
-	case NV_ENC_BUFFER_FORMAT_ABGR:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-    case NV_ENC_BUFFER_FORMAT_ABGR10:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-    default:
-        return DXGI_FORMAT_UNKNOWN;
+        case NV_ENC_BUFFER_FORMAT_NV12:
+            return DXGI_FORMAT_NV12;
+        case NV_ENC_BUFFER_FORMAT_ARGB:
+            return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case NV_ENC_BUFFER_FORMAT_ABGR:
+            return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case NV_ENC_BUFFER_FORMAT_ABGR10: // UE app
+            return DXGI_FORMAT_R10G10B10A2_UNORM; // !!
+        default:
+            return DXGI_FORMAT_UNKNOWN;
     }
 }
 
