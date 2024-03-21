@@ -162,7 +162,7 @@ namespace tc
 
             auto encoded_data = Data::Make((char*)packet_->data, packet_->size);
             if (encoder_callback_) {
-                auto image = Image::Make(encoded_data, img_width, img_height, 3, encoder_feature_.capture_index_);
+                auto image = Image::Make(encoded_data, img_width, img_height, 3);
                 encoder_callback_(image, frame_index, false);
             }
 
