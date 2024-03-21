@@ -69,9 +69,9 @@ bool NVENCVideoEncoder::Initialize(const tc::EncoderConfig& config)
     printf("CNvEncoder is successfully initialized.\n");
     // test
     if(encoder_config_.codec_type == tc::EVideoCodecType::kH264) {
-        fpOut = std::ofstream("encoded_video_frame.h264", std::ios::binary);
+        fpOut = std::ofstream(std::to_string(encoder_feature_.capture_index_) + "encoded_video_frame.h264", std::ios::binary);
     } else {
-        fpOut = std::ofstream("encoded_video_frame.h265", std::ios::binary);
+        fpOut = std::ofstream(std::to_string(encoder_feature_.capture_index_) + "encoded_video_frame.h265", std::ios::binary);
     }
     return true;
 }
@@ -121,7 +121,7 @@ void NVENCVideoEncoder::Transmit(ID3D11Texture2D* pTexture,  bool insertIDR)
     {
         auto encoded_data = Data::Make((char*)packet.data(), packet.size());
         if (encoder_callback_) {
-            auto image = Image::Make(encoded_data, out_width_, out_height_, 3);
+            auto image = Image::Make(encoded_data, out_width_, out_height_, 3, encoder_feature_.capture_index_);
             encoder_callback_(image, ++encoded_frame_index_, insertIDR);
         }
 

@@ -212,7 +212,8 @@ namespace tc
 	ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
 	    ComPtr<ID3D11Texture2D> sharedTexture;
 	    HRESULT hres;
-	    if (FAILED(hres = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf())))) {
+        hres = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf()));
+	    if (FAILED(hres)) {
 	        return nullptr;
 	    }
 	    return sharedTexture;
