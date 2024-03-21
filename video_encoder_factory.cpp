@@ -5,7 +5,7 @@
 #include "video_encoder_factory.h"
 #include "ffmpeg_video_encoder.h"
 #include "nvenc_video_encoder.h"
-#include "tc_common/log.h"
+#include "tc_common_new/log.h"
 #include "video_encoder.h"
 
 #include <memory>

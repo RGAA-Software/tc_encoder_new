@@ -9,10 +9,10 @@
 #include "../video_encoder_factory.h"
 #include "../ffmpeg_video_encoder.h"
 #include "../video_encoder.h"
-#include "tc_common/image.h"
-#include "tc_common/data.h"
-#include "tc_common/file.h"
-#include "tc_common/log.h"
+#include "tc_common_new/image.h"
+#include "tc_common_new/data.h"
+#include "tc_common_new/file.h"
+#include "tc_common_new/log.h"
 
 using namespace tc;
 

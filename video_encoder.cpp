@@ -3,10 +3,10 @@
 //
 
 #include "video_encoder.h"
-#include "tc_common/string_ext.h"
-#include "tc_common/message_notifier.h"
-#include "tc_encoder/encoder_messages.h"
-#include "tc_common/log.h"
+#include "tc_common_new/string_ext.h"
+#include "tc_common_new/message_notifier.h"
+#include "tc_encoder_new/encoder_messages.h"
+#include "tc_common_new/log.h"
 
 namespace tc
 {
