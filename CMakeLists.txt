@@ -33,10 +33,12 @@ set(SRCS
 
 message(----> ${FFMPEG_LIBRARIES})
 
+add_subdirectory(frame_render)
+
 add_library(tc_encoder_new ${SRCS})
 target_link_libraries(tc_encoder_new yuv)
 target_include_directories(tc_encoder_new PRIVATE ${FFMPEG_INCLUDE_DIRS})
 target_link_directories(tc_encoder_new PRIVATE ${FFMPEG_LIBRARY_DIRS})
-target_link_libraries(tc_encoder_new ${FFMPEG_LIBRARIES} tc_opus_codec_new)
+target_link_libraries(tc_encoder_new ${FFMPEG_LIBRARIES} tc_opus_codec_new frame_render)
 
 add_subdirectory(tests)

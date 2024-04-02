@@ -22,6 +22,7 @@ namespace tc
 	class Image;
     class MessageNotifier;
     class MessageListener;
+    class FrameRender;
 
 	enum VideoEncoderFormat {
 	    kH264,
@@ -56,6 +57,11 @@ namespace tc
 	    // 编码RGBA格式的图片，用于FFmpeg/VP9
 	    virtual void Encode(const std::shared_ptr<Image>& i420_data, uint64_t frame_index);
 	    virtual void Exit();
+        //D3D11 纹理加锁相关
+        bool D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d);
+        bool D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d);
+        bool CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture2d);
+        ComPtr<ID3D11Texture2D> OpenSharedTexture(HANDLE handle);
 
 	    EncoderConfig encoder_config_;
 	    EncoderFeature encoder_feature_;
@@ -87,13 +93,8 @@ namespace tc
 	    //要送往编码器的纹理
 	    ComPtr<ID3D11Texture2D> texture2d_;
 
-	    //D3D11 纹理加锁相关
-	    bool D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d);
-	    bool D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d);
+        std::shared_ptr<FrameRender> frame_render_ = nullptr;
 
-	    bool CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture2d);
-
-	    ComPtr<ID3D11Texture2D> OpenSharedTexture(HANDLE handle);
 	};
 
 }

@@ -43,6 +43,9 @@ struct EncoderConfig
 {
     int width = -1;
     int height = -1;
+    bool frame_resize = false;
+    int encode_width = -1;
+    int encode_height = -1;
     int sample_desc_count = -1;
 #ifdef WIN32
     int texture_format = -1;
