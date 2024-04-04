@@ -166,7 +166,7 @@ namespace tc
     void NVENCVideoEncoder::Transmit(ID3D11Texture2D *pTexture, bool insertIDR) {
         std::vector<std::vector<uint8_t>> vPacket;
         const NvEncInputFrame *encoderInputFrame = nv_necoder_->GetNextInputFrame();
-        ID3D11Texture2D *pInputTexture = reinterpret_cast<ID3D11Texture2D *>(encoderInputFrame->inputPtr);
+        auto pInputTexture = reinterpret_cast<ID3D11Texture2D *>(encoderInputFrame->inputPtr);
         d3d11_device_context_->CopyResource(pInputTexture, pTexture);
 
         NV_ENC_PIC_PARAMS picParams = {};

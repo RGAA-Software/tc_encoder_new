@@ -34,6 +34,7 @@ set(SRCS
 message(----> ${FFMPEG_LIBRARIES})
 
 add_subdirectory(frame_render)
+add_subdirectory(legacy)
 
 add_library(tc_encoder_new ${SRCS})
 target_link_libraries(tc_encoder_new yuv)
