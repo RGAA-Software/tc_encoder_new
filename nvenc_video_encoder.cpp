@@ -87,7 +87,7 @@ namespace tc
                 return;
             }
             Encode(texture2d_.Get());
-            LOGI("shared-copy-encode: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
+            //LOGI("shared-copy-encode: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
         }
 
         //DebugOutDDS(texture2d_.Get(), "1.dds");
