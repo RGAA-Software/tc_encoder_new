@@ -1,5 +1,5 @@
 //
-// Created by hy on 2023/12/19.
+// Created by RGAA on 2023/12/19.
 //
 
 #ifndef TC_APPLICATION_FFMPEG_VIDEO_ENCODER_H
