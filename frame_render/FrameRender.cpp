@@ -24,55 +24,13 @@ namespace tc
         m_RTV(nullptr),
         m_SrcTexture(nullptr),
         m_SrcSrv(nullptr)
-    {
-    }
+    {}
 
-    FrameRender::~FrameRender()
-    {
+    FrameRender::~FrameRender() {
         CleanRefs();
     }
 
-    HRESULT FrameRender::InitDx()
-    {
-        HRESULT hr = 0;
-#if 0
-        // Driver types supported
-        D3D_DRIVER_TYPE DriverTypes[] =
-        {
-            D3D_DRIVER_TYPE_HARDWARE,
-            D3D_DRIVER_TYPE_WARP,
-            D3D_DRIVER_TYPE_REFERENCE,
-        };
-        UINT NumDriverTypes = ARRAYSIZE(DriverTypes);
-
-        // Feature levels supported
-        D3D_FEATURE_LEVEL FeatureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_1,
-            D3D_FEATURE_LEVEL_10_0,
-            D3D_FEATURE_LEVEL_9_1
-        };
-        UINT NumFeatureLevels = ARRAYSIZE(FeatureLevels);
-        D3D_FEATURE_LEVEL FeatureLevel;
-
-        // Create device
-        for (UINT DriverTypeIndex = 0; DriverTypeIndex < NumDriverTypes; ++DriverTypeIndex)
-        {
-            hr = D3D11CreateDevice(nullptr, DriverTypes[DriverTypeIndex], nullptr, 0, FeatureLevels, NumFeatureLevels,
-                D3D11_SDK_VERSION, &m_Device, &FeatureLevel, &m_DeviceContext);
-            if (SUCCEEDED(hr))
-            {
-                // Device creation succeeded, no need to loop anymore
-                break;
-            }
-        }
-#endif
-        return hr;
-    }
-
-    HRESULT FrameRender::InitializeDesc(_In_ SIZE size, _Out_ D3D11_TEXTURE2D_DESC* pTargetDesc, int format)
-    {
+    HRESULT FrameRender::InitializeDesc(_In_ SIZE size, _Out_ D3D11_TEXTURE2D_DESC* pTargetDesc, int format) {
         // Create shared texture for the target view
         RtlZeroMemory(pTargetDesc, sizeof(D3D11_TEXTURE2D_DESC));
         pTargetDesc->Width = size.cx;
@@ -84,26 +42,13 @@ namespace tc
         pTargetDesc->SampleDesc.Count = 1;
         pTargetDesc->Usage = D3D11_USAGE_DEFAULT;
         pTargetDesc->BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-//        pTargetDesc->CPUAccessFlags = D3D11_CPU_ACCESS_READ;//0;
-//        pTargetDesc->MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-
-//        pTargetDesc->MipLevels = 1;
-//        pTargetDesc->ArraySize = 1;
-//        pTargetDesc->SampleDesc.Count = 1;
-//        pTargetDesc->Usage = D3D11_USAGE_DEFAULT;
-//        pTargetDesc->BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-
         return S_OK;
     }
 
-    HRESULT FrameRender::Prepare(SIZE targetSize, SIZE originSize, int format)
-    {
+    HRESULT FrameRender::Prepare(SIZE targetSize, SIZE originSize, int format) {
         HRESULT hr;
-
         // Create target texture
         D3D11_TEXTURE2D_DESC targetDesc;
-        //pTargetDesc->Format = DXGI_FORMAT_B8G8R8A8_UNORM;//DXGI_FORMAT_R8G8B8A8_UNORM;
-        //targetDesc.Format = static_cast<DXGI_FORMAT>(format);
         InitializeDesc(targetSize, &targetDesc, format);
         hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_TargetTexture);
         RETURN_ON_BAD_HR(hr);
@@ -118,17 +63,13 @@ namespace tc
         desc.Usage = D3D11_USAGE_STAGING;
 		desc.BindFlags = 0;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-//		desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
         hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_FinalTexture);
-        printf("--> create final desc : %x \n", hr);
 
         targetDesc.Width = originSize.cx;
         targetDesc.Height = originSize.cy;
 		hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_SrcTexture);
-		printf("--> create pre desc : %x \n", hr);
 
-        ///
 		D3D11_TEXTURE2D_DESC srcDesc = { };
         m_SrcTexture->GetDesc(&srcDesc);
 		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
@@ -137,7 +78,6 @@ namespace tc
 		SRVDesc.Texture2D.MostDetailedMip = 0;
 		SRVDesc.Texture2D.MipLevels = 1;
         hr = m_Device->CreateShaderResourceView(m_SrcTexture, &SRVDesc, &m_SrcSrv);
-        printf("--> create shader resource view : %p \n", hr);
 
         // Make new render target view
         hr = MakeRTV();
@@ -181,8 +121,7 @@ namespace tc
         return S_OK;
     }
 
-    HRESULT FrameRender::Draw()
-    {
+    HRESULT FrameRender::Draw() {
         FLOAT color[]{0, 0, 0, 0};
         m_DeviceContext->ClearRenderTargetView(m_RTV, color);
 
@@ -230,30 +169,18 @@ namespace tc
 
         // Draw textured quad onto render target
         m_DeviceContext->Draw(NUMVERTICES, 0);
-
-//        if (!D3D11Texture2DLockMutex(m_TargetTexture)) {
-//            printf("frame resize, D3D11Texture2DLockMutex error\n");
-//            return S_FALSE;
-//        }
-//        std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
-//            D3D11Texture2DReleaseMutex(m_TargetTexture);
-//        });
         m_DeviceContext->CopyResource(m_FinalTexture, m_TargetTexture);
-
         return S_OK;
     }
 
-    HRESULT FrameRender::MakeRTV()
-    {
+    HRESULT FrameRender::MakeRTV() {
         HRESULT hr = m_Device->CreateRenderTargetView(m_TargetTexture, nullptr, &m_RTV);
         RETURN_ON_BAD_HR(hr);
-
         m_DeviceContext->OMSetRenderTargets(1, &m_RTV, nullptr);
-
         return S_OK;
     }
-    void FrameRender::SetViewPort(SIZE size)
-    {
+
+    void FrameRender::SetViewPort(SIZE size) {
         D3D11_VIEWPORT VP;
         VP.Width = static_cast<FLOAT>(size.cx);
         VP.Height = static_cast<FLOAT>(size.cy);
@@ -263,11 +190,8 @@ namespace tc
         VP.TopLeftY = 0;
         m_DeviceContext->RSSetViewports(1, &VP);
     }
-    //
-    // Initialize shaders for drawing to screen
-    //
-    HRESULT FrameRender::InitShaders()
-    {
+
+    HRESULT FrameRender::InitShaders() {
         HRESULT hr;
 
         UINT Size = ARRAYSIZE(g_VS);
@@ -291,73 +215,59 @@ namespace tc
 
         return S_OK;
     }
-    //
-    // Releases all references
-    //
-    void FrameRender::CleanRefs()
-    {
-        if (m_VertexShader)
-        {
+
+    void FrameRender::CleanRefs() {
+        if (m_VertexShader) {
             m_VertexShader->Release();
             m_VertexShader = nullptr;
         }
 
-        if (m_PixelShader)
-        {
+        if (m_PixelShader) {
             m_PixelShader->Release();
             m_PixelShader = nullptr;
         }
 
-        if (m_InputLayout)
-        {
+        if (m_InputLayout) {
             m_InputLayout->Release();
             m_InputLayout = nullptr;
         }
 
-        if (m_RTV)
-        {
+        if (m_RTV) {
             m_RTV->Release();
             m_RTV = nullptr;
         }
 
-        if (m_SamplerLinear)
-        {
+        if (m_SamplerLinear) {
             m_SamplerLinear->Release();
             m_SamplerLinear = nullptr;
         }
 
-        if (m_BlendState)
-        {
+        if (m_BlendState) {
             m_BlendState->Release();
             m_BlendState = nullptr;
         }
 
-        if (m_TargetTexture)
-        {
+        if (m_TargetTexture) {
             m_TargetTexture->Release();
             m_TargetTexture = nullptr;
         }
 
-        if (m_SrcTexture)
-        {
+        if (m_SrcTexture) {
             m_SrcTexture->Release();
             m_SrcTexture = nullptr;
         }
 
-        if (m_SrcSrv)
-        {
+        if (m_SrcSrv) {
             m_SrcSrv->Release();
             m_SrcSrv = nullptr;
         }
 
-        if (m_DeviceContext)
-        {
+        if (m_DeviceContext) {
             m_DeviceContext->Release();
             m_DeviceContext = nullptr;
         }
 
-        if (m_Device)
-        {
+        if (m_Device) {
             m_Device->Release();
             m_Device = nullptr;
         }

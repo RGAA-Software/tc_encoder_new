@@ -12,12 +12,10 @@
 namespace tc
 {
 
-    VideoEncoder::VideoEncoder(const std::shared_ptr<MessageNotifier> &msg_notifier,
-                               const EncoderFeature &encoder_feature) {
+    VideoEncoder::VideoEncoder(const std::shared_ptr<MessageNotifier> &msg_notifier, const EncoderFeature &encoder_feature) {
         msg_notifier_ = msg_notifier;
         encoder_feature_ = encoder_feature;
         LOGI("adapter_uid_ = {}", encoder_feature_.adapter_uid_);
-        // 枚举所有的显卡,找到与adapter_uid匹配的显卡设备
         ComPtr<IDXGIFactory1> factory1;
         ComPtr<IDXGIAdapter1> adapter;
         DXGI_ADAPTER_DESC desc;
@@ -53,11 +51,10 @@ namespace tc
         }
 
         D3D_FEATURE_LEVEL featureLevel;
-        // D3D11_CREATE_DEVICE_BGRA_SUPPORT 如果是其他颜色格式应该怎么传，如果是游戏画面这里怎么传呢
         res = D3D11CreateDevice(adapter.Get(),
-                                D3D_DRIVER_TYPE_UNKNOWN, NULL,
+                                D3D_DRIVER_TYPE_UNKNOWN, nullptr,
                                 D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-                                NULL, 0, D3D11_SDK_VERSION,
+                                nullptr, 0, D3D11_SDK_VERSION,
                                 &d3d11_device_, &featureLevel, &d3d11_device_context_);
 
         if (res != S_OK || !d3d11_device_) {
@@ -66,13 +63,10 @@ namespace tc
             LOGI("D3D11CreateDevice mDevice = {}", (void *) d3d11_device_.Get());
         }
 
-        //
         ListenMessages();
     }
 
-    VideoEncoder::~VideoEncoder() {
-
-    }
+    VideoEncoder::~VideoEncoder() = default;
 
     bool VideoEncoder::Initialize(const tc::EncoderConfig &config) {
         encoder_config_ = config;
@@ -217,7 +211,6 @@ namespace tc
         if (msg_notifier_) {
             msg_listener_ = msg_notifier_->CreateListener();
             msg_listener_->Listen<MsgInsertIDR>([=, this](const auto &msg) {
-                LOGI("====> OK, received IDR message....");
                 this->InsertIDR();
             });
         }

@@ -9,9 +9,7 @@
 
 extern "C" {
     #include "libavcodec/avcodec.h"
-    //#include <x265.h>  // to do 这里暂时注释掉
 }
-
 
 namespace tc
 {
@@ -21,7 +19,6 @@ namespace tc
         ~FFmpegVideoEncoder() override;
 
         bool Initialize(const tc::EncoderConfig& config) override;
-        //bool Init() override;
         void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) override;
         void Exit() override;
 

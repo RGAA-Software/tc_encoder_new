@@ -12,7 +12,6 @@ namespace tc
     NVENCVideoEncoder::NVENCVideoEncoder(const std::shared_ptr<MessageNotifier> &msg_notifier,
                                          const EncoderFeature &encoder_feature)
             : VideoEncoder(msg_notifier, encoder_feature) {
-
     }
 
     NVENCVideoEncoder::~NVENCVideoEncoder() = default;
@@ -24,20 +23,17 @@ namespace tc
     }
 
     void NVENCVideoEncoder::Encode(uint64_t shared_handle, uint64_t frame_index) {
-        // 此外还有使用遍历查找的方式 找到合适的d3d设备
         ComPtr<ID3D11Texture2D> shared_texture;
         shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(shared_handle));
         if (!shared_texture) {
-            printf("sharedTex nullptr\n");
+            LOGE("OpenSharedTexture failed.");
             return;
         }
 
         //DebugOutDDS(shared_texture.Get(), "1.dds");
 
-        //
         D3D11_TEXTURE2D_DESC desc;
         shared_texture->GetDesc(&desc);
-        //LOGI("format: {}", desc.Format);
         if (encoder_config_.frame_resize) {
             auto beg = TimeExt::GetCurrentTimestamp();
             if (!frame_render_ && d3d11_device_ && d3d11_device_context_) {
@@ -46,12 +42,11 @@ namespace tc
                 frame_render_->Prepare(target_size, {(long) desc.Width, (long) desc.Height}, desc.Format);
             }
 
-            auto resizerDevice = frame_render_->GetD3D11Device();
-            auto resizerDeviceContext = frame_render_->GetD3D11DeviceContext();
+            auto resize_ctx = frame_render_->GetD3D11DeviceContext();
 
             {
                 if (!D3D11Texture2DLockMutex(shared_texture)) {
-                    printf("frame resize, D3D11Texture2DLockMutex error\n");
+                    LOGE("D3D11Texture2DLockMutex error\n");
                     return;
                 }
                 std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
@@ -60,82 +55,55 @@ namespace tc
                 auto pre_texture = frame_render_->GetSrcTexture();
                 ID3D11Device* dev;
                 shared_texture->GetDevice(&dev);
-                //LOGI("dev: {}, render dev: {}", (void*)dev, (void*)resizerDevice);
-                resizerDeviceContext->CopyResource(pre_texture, shared_texture.Get());
+                resize_ctx->CopyResource(pre_texture, shared_texture.Get());
                 //DebugOutDDS(pre_texture, "2.dds");
             }
             frame_render_->Draw();
             auto final_texture = frame_render_->GetFinalTexture();
             //DebugOutDDS(final_texture, "3.dds");
             if (!final_texture) {
-                LOGE("Draw failed...");
+                LOGE("Draw failed");
                 return;
             }
-
-//            if (!CopyID3D11Texture2D(final_texture)) {
-//                printf("CopyID3D11Texture2D error");
-//                return;
-//            }
-            LOGI("shared-copy-resize: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
             Encode(final_texture);
-            LOGI("shared-copy-resize-encode: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
-
         } else {
-            auto beg = TimeExt::GetCurrentTimestamp();
             if (!CopyID3D11Texture2D(shared_texture)) {
-                printf("CopyID3D11Texture2D error");
+                LOGE("CopyID3D11Texture2D failed.");
                 return;
             }
             Encode(texture2d_.Get());
-            //LOGI("shared-copy-encode: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
         }
-
         //DebugOutDDS(texture2d_.Get(), "1.dds");
     }
 
     bool NVENCVideoEncoder::Initialize(const tc::EncoderConfig &config) {
         VideoEncoder::Initialize(config);
-        // ffmpeg 编码的时候，有奇偶数的问题，英伟达有没有，等确定下
         auto format = DxgiFormatToNvEncFormat(static_cast<DXGI_FORMAT>(config.texture_format));
-        //MessageBoxA(0, "NvEncoderD3D11", "NvEncoderD3D11", 0);
         LOGI("input_frame_width_ = {}, input_frame_height_ = {}, format = {:x} , m_pD3DRender->GetDevice() = {}",
              input_frame_width_, input_frame_height_, (int) format, (void *) d3d11_device_.Get());
         try {
-            nv_necoder_ = std::make_shared<NvEncoderD3D11>(d3d11_device_.Get(), input_frame_width_, input_frame_height_,
-                                                           format, 0);// 0 代表延迟
-        }
-        catch (NVENCException e) {
-            printf("NvEnc NvEncoderD3D11 failed. Code=%d %s\n", e.getErrorCode(), e.what());
+            nv_encoder_ = std::make_shared<NvEncoderD3D11>(d3d11_device_.Get(), input_frame_width_, input_frame_height_, format, 0);
+        } catch (const NVENCException& e) {
+            LOGI("NVENC NvEncoderD3D11 failed: {} => {}", e.getErrorCode(), e.what());
             return false;
         }
         NV_ENC_INITIALIZE_PARAMS initializeParams = {NV_ENC_INITIALIZE_PARAMS_VER};
-        NV_ENC_CONFIG encodeConfig = {NV_ENC_CONFIG_VER};
+        NV_ENC_CONFIG encode_config = {NV_ENC_CONFIG_VER};
 
-        encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR; // 设置为常量比特率控制模式
-        encodeConfig.rcParams.averageBitRate = 10 * 1024 * 1024; // 设置平均码率为4Mbps
-        encodeConfig.rcParams.maxBitRate = 30 * 1024 * 1024; // 设置最大码率为5Mbps（适用于VBR模式）
-        encodeConfig.rcParams.vbvBufferSize = 1 * 1024 * 1024; // 设置VBV缓冲区大小为1MB
+        encode_config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
+        encode_config.rcParams.averageBitRate = 10 * 1024 * 1024;
+        encode_config.rcParams.maxBitRate = 50 * 1024 * 1024;
+        encode_config.rcParams.vbvBufferSize = 1 * 1024 * 1024;
 
-        initializeParams.encodeConfig = &encodeConfig;
-        // 设置这里可以改变编码后的输出大小
+        initializeParams.encodeConfig = &encode_config;
         FillEncodeConfig(initializeParams, refresh_rate_, out_width_, out_height_, config.bitrate);
         try {
-            nv_necoder_->CreateEncoder(&initializeParams);
-        }
-        catch (NVENCException e) {
-            if (e.getErrorCode() == NV_ENC_ERR_INVALID_PARAM) {
-                printf("This GPU does not support H.265 encoding. (NvEncoderCuda NV_ENC_ERR_INVALID_PARAM)");
-            }
-            printf("NvEnc CreateEncoder failed.Code = % d % hs \n", e.getErrorCode(), e.what());
+            nv_encoder_->CreateEncoder(&initializeParams);
+        } catch (const NVENCException& e) {
+            LOGI("Config failed: {} => {}", e.getErrorCode(), e.what());
             return false;
         }
-        printf("CNvEncoder is successfully initialized.\n");
-        // test
-        if (encoder_config_.codec_type == tc::EVideoCodecType::kH264) {
-            fpOut = std::ofstream("encoded_video_frame.h264", std::ios::binary);
-        } else {
-            fpOut = std::ofstream("encoded_video_frame.h265", std::ios::binary);
-        }
+        LOGI("NVENC init success.");
         return true;
     }
 
@@ -144,88 +112,70 @@ namespace tc
     }
 
     void NVENCVideoEncoder::Shutdown() {
-        std::vector<std::vector<uint8_t>> vPacket;
-        if (nv_necoder_)
-            nv_necoder_->EndEncode(vPacket);
-
-        for (std::vector<uint8_t> &packet: vPacket) {
-            if (fpOut) {
-                fpOut.write(reinterpret_cast<char *>(packet.data()), packet.size());
-            }
+        std::vector<std::vector<uint8_t>> out_packet;
+        if (nv_encoder_) {
+            nv_encoder_->EndEncode(out_packet);
         }
-        if (nv_necoder_) {
-            nv_necoder_->DestroyEncoder();
-            nv_necoder_.reset();
-        }
-        printf("CNvEncoder::Shutdown\n");
-        if (fpOut) {
-            fpOut.close();
+        if (nv_encoder_) {
+            nv_encoder_->DestroyEncoder();
+            nv_encoder_.reset();
         }
     }
 
-    void NVENCVideoEncoder::Transmit(ID3D11Texture2D *pTexture, bool insertIDR) {
-        std::vector<std::vector<uint8_t>> vPacket;
-        const NvEncInputFrame *encoderInputFrame = nv_necoder_->GetNextInputFrame();
-        auto pInputTexture = reinterpret_cast<ID3D11Texture2D *>(encoderInputFrame->inputPtr);
+    void NVENCVideoEncoder::Transmit(ID3D11Texture2D *pTexture, bool idr) {
+        std::vector<std::vector<uint8_t>> out_packet;
+        const NvEncInputFrame *input_frame = nv_encoder_->GetNextInputFrame();
+        auto pInputTexture = reinterpret_cast<ID3D11Texture2D *>(input_frame->inputPtr);
         d3d11_device_context_->CopyResource(pInputTexture, pTexture);
 
         NV_ENC_PIC_PARAMS picParams = {};
-        if (/*insertIDR ||*/ insert_idr_) {
-            printf("Inserting IDR frame.\n");
+        if (insert_idr_) {
             picParams.encodePicFlags = NV_ENC_PIC_FLAG_FORCEIDR;
             insert_idr_ = false;
         }
-        nv_necoder_->EncodeFrame(vPacket, &picParams);
+        nv_encoder_->EncodeFrame(out_packet, &picParams);
 
-        for (std::vector<uint8_t> &packet: vPacket) {
+        for (std::vector<uint8_t> &packet: out_packet) {
             auto encoded_data = Data::Make((char *) packet.data(), packet.size());
             if (encoder_callback_) {
                 auto image = Image::Make(encoded_data, out_width_, out_height_, 3);
-                encoder_callback_(image, ++encoded_frame_index_, insertIDR);
+                encoder_callback_(image, ++encoded_frame_index_, insert_idr_);
             }
-
-            if (fpOut) {
-                //fpOut.write(reinterpret_cast<char *>(packet.data()), packet.size());
-            }
-            //ParseFrameNals(m_codec, packet.data(), (int)packet.size(), targetTimestampNs, insertIDR);
         }
     }
 
     void
-    NVENCVideoEncoder::FillEncodeConfig(NV_ENC_INITIALIZE_PARAMS &initializeParams, int refreshRate, int renderWidth,
-                                        int renderHeight, uint64_t bitrate_bps) {
-        auto &encodeConfig = *initializeParams.encodeConfig;
+    NVENCVideoEncoder::FillEncodeConfig(NV_ENC_INITIALIZE_PARAMS &initialize_params, int refreshRate, int renderWidth, int renderHeight, uint64_t bitrate_bps) {
+        auto& encode_config = *initialize_params.encodeConfig;
+        GUID encoder_guid = encoder_config_.codec_type == tc::EVideoCodecType::kH264 ? NV_ENC_CODEC_H264_GUID : NV_ENC_CODEC_HEVC_GUID;
 
-        GUID encoderGUID = encoder_config_.codec_type == tc::EVideoCodecType::kH264 ? NV_ENC_CODEC_H264_GUID
-                                                                                    : NV_ENC_CODEC_HEVC_GUID;
-
-        GUID qualityPreset;
+        GUID quality_preset;
 
         // 随着从 P1 到 P7 的转变，性能下降而质量提高
         // See recommended NVENC settings for low-latency encoding.
         // https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-video-encoder-api-prog-guide/#recommended-nvenc-settings
         switch (encoder_config_.quality_preset) {
             case 7:
-                qualityPreset = NV_ENC_PRESET_P7_GUID;
+                quality_preset = NV_ENC_PRESET_P7_GUID;
                 break;
             case 6:
-                qualityPreset = NV_ENC_PRESET_P6_GUID;
+                quality_preset = NV_ENC_PRESET_P6_GUID;
                 break;
             case 5:
-                qualityPreset = NV_ENC_PRESET_P5_GUID;
+                quality_preset = NV_ENC_PRESET_P5_GUID;
                 break;
             case 4:
-                qualityPreset = NV_ENC_PRESET_P4_GUID;
+                quality_preset = NV_ENC_PRESET_P4_GUID;
                 break;
             case 3:
-                qualityPreset = NV_ENC_PRESET_P3_GUID;
+                quality_preset = NV_ENC_PRESET_P3_GUID;
                 break;
             case 2:
-                qualityPreset = NV_ENC_PRESET_P2_GUID;
+                quality_preset = NV_ENC_PRESET_P2_GUID;
                 break;
             case 1:
             default:
-                qualityPreset = NV_ENC_PRESET_P1_GUID;
+                quality_preset = NV_ENC_PRESET_P1_GUID;
                 break;
         }
 
@@ -240,14 +190,13 @@ namespace tc
         //超低延迟流媒体
         //NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY = 3,                                     /**< Tune presets for ultra low latency streaming.
 
-        NV_ENC_TUNING_INFO tuningPreset = NV_ENC_TUNING_INFO_LOW_LATENCY;
+        NV_ENC_TUNING_INFO tuning_preset = NV_ENC_TUNING_INFO_LOW_LATENCY;
+        nv_encoder_->CreateDefaultEncoderParams(&initialize_params, encoder_guid, quality_preset, tuning_preset);
 
-        nv_necoder_->CreateDefaultEncoderParams(&initializeParams, encoderGUID, qualityPreset, tuningPreset);
-
-        initializeParams.encodeWidth = initializeParams.darWidth = renderWidth;
-        initializeParams.encodeHeight = initializeParams.darHeight = renderHeight;
-        initializeParams.frameRateNum = refreshRate;
-        initializeParams.frameRateDen = 1;
+        initialize_params.encodeWidth = initialize_params.darWidth = renderWidth;
+        initialize_params.encodeHeight = initialize_params.darHeight = renderHeight;
+        initialize_params.frameRateNum = refreshRate;
+        initialize_params.frameRateDen = 1;
 
         // enableWeightedPrediction 是否启用加权预测
 
@@ -259,7 +208,7 @@ namespace tc
         //然而，需要注意的是，加权预测可能会增加编码的计算复杂性，并略微增加比特率。
         //因此，在某些情况下，禁用加权预测可能更适合，例如在对编码速度有更高要求的实时应用中。
 
-        initializeParams.enableWeightedPrediction = 0;
+        initialize_params.enableWeightedPrediction = 0;
 
         // 16 is recommended when using reference frame invalidation. But it has caused bad visual quality.
         // Now, use 0 (use default).
@@ -275,9 +224,8 @@ namespace tc
             gopLength = encoder_config_.gop_size;
         }
 
-
         if (encoder_config_.codec_type == tc::EVideoCodecType::kH264) {
-            auto &config = encodeConfig.encodeCodecConfig.h264Config;
+            auto &config = encode_config.encodeCodecConfig.h264Config;
             //将其设置为1以启用在每个IDR帧中写入序列参数（Sequence Parameter）和图像参数（Picture Parameter）。
             //等再研究下这两种参数
             config.repeatSPSPPS = 1;
@@ -310,7 +258,7 @@ namespace tc
 
             // config.enableFillerDataInsertion;
         } else {
-            auto &config = encodeConfig.encodeCodecConfig.hevcConfig;
+            auto &config = encode_config.encodeCodecConfig.hevcConfig;
             config.repeatSPSPPS = 1;
             if (encoder_config_.supports_intra_refresh) {
                 config.enableIntraRefresh = 1;
@@ -321,115 +269,115 @@ namespace tc
             config.maxNumRefFramesInDPB = maxNumRefFrames;
             config.idrPeriod = gopLength;
         }
-        encodeConfig.gopLength = gopLength;
-        encodeConfig.frameIntervalP = 1; // forbidden B frame
+        encode_config.gopLength = gopLength;
+        encode_config.frameIntervalP = 1; // forbidden B frame
         // 恒定码率 还是 可变码率
         //return; // no error
         switch (encoder_config_.rate_control_mode) {
             case tc::ERateControlMode::kRateControlModeCbr:
-                encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
+                encode_config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
                 break;
             case tc::ERateControlMode::kRateControlModeVbr:
-                encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
+                encode_config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
                 // 在 NVIDIA Video Codec (NVENC) SDK 中，targetQuality 是用于可变比特率（VBR）模式的参数设置之一。
                 // Target CQ (Constant Quality) level for VBR mode (range 0-51 with 0-automatic)
                 // targetQuality 值越大编码质量越好
-                // encodeConfig.rcParams.targetQuality = 28;
+                // encode_config.rcParams.targetQuality = 28;
                 if (encoder_config_.target_quality != -1) {
-                    encodeConfig.rcParams.targetQuality = encoder_config_.target_quality;
+                    encode_config.rcParams.targetQuality = encoder_config_.target_quality;
                 }
 
                 break;
             case tc::ERateControlMode::kRateControlModeConstQp:
-                encodeConfig.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CONSTQP;
+                encode_config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CONSTQP;
                 break;
             default:
                 break;
         }
-//	_NV_ENC_MULTI_PASS 多次编码设置   8.x版本的api没有这个参数
-//	NV_ENC_MULTI_PASS_DISABLED：表示禁用多次编码过程。在单次编码过程中，每个视频帧只编码一次，没有额外的预处理或后处理步骤。
-//	使用此标志时，编码器不会保存任何状态信息，并且不需要执行多次编码。
-//
-//	NV_ENC_TWO_PASS_QUARTER_RESOLUTION：表示使用两次编码过程，其中第一次编码过程使用四分之一的分辨率进行编码。
-//	在第一次编码过程中，视频帧以较低的分辨率进行编码，以获得初步的编码统计信息。然后，编码器使用这些统计信息来优化第二次编码过程，
-//	该过程使用完整的分辨率进行编码。这种方法可以在保持较高质量的同时减少编码的计算成本。
-//
-//	NV_ENC_TWO_PASS_FULL_RESOLUTION：表示使用两次编码过程，其中两次编码过程均使用完整的分辨率进行编码。
-//	在第一次编码过程中，视频帧以完整的分辨率进行编码，并生成编码统计信息。然后，编码器使用这些统计信息来优化第二次编码过程，
-//	该过程仍使用完整的分辨率进行编码。这种方法可以进一步提高编码质量，但需要更多的计算资源。
+
+        //	_NV_ENC_MULTI_PASS 多次编码设置   8.x版本的api没有这个参数
+        //	NV_ENC_MULTI_PASS_DISABLED：表示禁用多次编码过程。在单次编码过程中，每个视频帧只编码一次，没有额外的预处理或后处理步骤。
+        //	使用此标志时，编码器不会保存任何状态信息，并且不需要执行多次编码。
+        //
+        //	NV_ENC_TWO_PASS_QUARTER_RESOLUTION：表示使用两次编码过程，其中第一次编码过程使用四分之一的分辨率进行编码。
+        //	在第一次编码过程中，视频帧以较低的分辨率进行编码，以获得初步的编码统计信息。然后，编码器使用这些统计信息来优化第二次编码过程，
+        //	该过程使用完整的分辨率进行编码。这种方法可以在保持较高质量的同时减少编码的计算成本。
+        //
+        //	NV_ENC_TWO_PASS_FULL_RESOLUTION：表示使用两次编码过程，其中两次编码过程均使用完整的分辨率进行编码。
+        //	在第一次编码过程中，视频帧以完整的分辨率进行编码，并生成编码统计信息。然后，编码器使用这些统计信息来优化第二次编码过程，
+        //	该过程仍使用完整的分辨率进行编码。这种方法可以进一步提高编码质量，但需要更多的计算资源。
         switch (encoder_config_.multi_pass) {
             case tc::ENvdiaEncMultiPass::kMultiPassDisabled:
-                encodeConfig.rcParams.multiPass = NV_ENC_MULTI_PASS_DISABLED;
+                encode_config.rcParams.multiPass = NV_ENC_MULTI_PASS_DISABLED;
                 break;
             case tc::ENvdiaEncMultiPass::kTwoPassQuarterResolution:
-                encodeConfig.rcParams.multiPass = NV_ENC_TWO_PASS_QUARTER_RESOLUTION;
+                encode_config.rcParams.multiPass = NV_ENC_TWO_PASS_QUARTER_RESOLUTION;
                 break;
             case tc::ENvdiaEncMultiPass::kTwoPassFullResolution:
-                encodeConfig.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
+                encode_config.rcParams.multiPass = NV_ENC_TWO_PASS_FULL_RESOLUTION;
                 break;
             default:
                 break;
         }
 
-//	在单帧 VBV（Video Buffering Verifier）和 CBR（Constant Bit Rate）速率控制模式下，指定 I 帧比 P 帧的比特率。对于低延迟调优信息，默认设置为 2；
-//	对于超低延迟调优信息，默认设置为 1。
-        encodeConfig.rcParams.lowDelayKeyFrameScale = 1;
-        uint32_t maxFrameSize = static_cast<uint32_t>(bitrate_bps / refreshRate);
-        encodeConfig.rcParams.vbvBufferSize = maxFrameSize * 1.1;
-        encodeConfig.rcParams.vbvInitialDelay = maxFrameSize * 1.1;
-        encodeConfig.rcParams.maxBitRate = static_cast<uint32_t>(bitrate_bps);
-        encodeConfig.rcParams.averageBitRate = static_cast<uint32_t>(bitrate_bps);
+        //	在单帧 VBV（Video Buffering Verifier）和 CBR（Constant Bit Rate）速率控制模式下，指定 I 帧比 P 帧的比特率。对于低延迟调优信息，默认设置为 2；
+        //	对于超低延迟调优信息，默认设置为 1。
+        encode_config.rcParams.lowDelayKeyFrameScale = 1;
+        auto maxFrameSize = static_cast<uint32_t>(bitrate_bps / refreshRate);
+        encode_config.rcParams.vbvBufferSize = maxFrameSize * 1.1;
+        encode_config.rcParams.vbvInitialDelay = maxFrameSize * 1.1;
+        encode_config.rcParams.maxBitRate = static_cast<uint32_t>(bitrate_bps);
+        encode_config.rcParams.averageBitRate = static_cast<uint32_t>(bitrate_bps);
 
-//	在 NVIDIA Video Codec (NVENC) SDK 中，_NV_ENC_RC_PARAMS 结构体中的 enableAQ 字段用于启用自适应量化（Adaptive Quantization）。
-//	自适应量化是一种编码技术，用于根据图像内容的复杂性动态调整量化参数。量化参数控制编码过程中的压缩比和图像质量之间的权衡。通过自适应量化，
-//	编码器可以根据图像的空间特征和运动信息，针对不同区域和帧间预测类型采用不同的量化参数，从而提高编码效率和图像质量。
-//	enableAQ 字段的含义是是否启用自适应量化。如果将其设置为非零值（通常为 1），则表示启用自适应量化；如果将其设置为零，则表示禁用自适应量化。
-//	通过启用自适应量化，编码器可以根据图像内容进行动态调整，以获得更好的压缩效率和图像质量。但请注意，自适应量化可能会增加编码的计算复杂性，并可能对编码性能产生一定的影响。因此，在使用 enableAQ 字段时需要权衡编码质量、性能和计算资源的需求。
-//
-        encodeConfig.rcParams.enableAQ = 0;
+        //	在 NVIDIA Video Codec (NVENC) SDK 中，_NV_ENC_RC_PARAMS 结构体中的 enableAQ 字段用于启用自适应量化（Adaptive Quantization）。
+        //	自适应量化是一种编码技术，用于根据图像内容的复杂性动态调整量化参数。量化参数控制编码过程中的压缩比和图像质量之间的权衡。通过自适应量化，
+        //	编码器可以根据图像的空间特征和运动信息，针对不同区域和帧间预测类型采用不同的量化参数，从而提高编码效率和图像质量。
+        //	enableAQ 字段的含义是是否启用自适应量化。如果将其设置为非零值（通常为 1），则表示启用自适应量化；如果将其设置为零，则表示禁用自适应量化。
+        //	通过启用自适应量化，编码器可以根据图像内容进行动态调整，以获得更好的压缩效率和图像质量。但请注意，自适应量化可能会增加编码的计算复杂性，并可能对编码性能产生一定的影响。因此，在使用 enableAQ 字段时需要权衡编码质量、性能和计算资源的需求。
+        encode_config.rcParams.enableAQ = 0;
         if (encoder_config_.enable_adaptive_quantization) {
-            encodeConfig.rcParams.enableAQ = 1;
+            encode_config.rcParams.enableAQ = 1;
         }
 
 
-//	在 NVIDIA Video Codec (NVENC) SDK 中，_NV_ENC_RC_PARAMS 结构体中的 enableTemporalAQ 字段用于启用时域自适应量化（Temporal Adaptive Quantization）。
-//	时域自适应量化是一种编码技术，基于视频序列中帧间相关性的变化，动态调整量化参数。与空间自适应量化（Adaptive Quantization）不同，
-//	时域自适应量化考虑了帧间的相关性，以提高编码效率和图像质量。
-//	enableTemporalAQ 字段的含义是是否启用时域自适应量化。如果将其设置为非零值（通常为 1），则表示启用时域自适应量化；如果将其设置为零，则表示禁用时域自适应量化。
-//	启用时域自适应量化可以在编码过程中根据帧间相关性进行动态调整，以优化压缩效率和图像质量。
-//	它可以根据帧间运动信息和相关性来调整量化参数，以便更好地保留运动细节和细微差异，从而提高编码效果。
-//	需要注意的是，启用时域自适应量化可能会增加编码器的计算复杂性，并可能对编码性能产生一定的影响。
-//	因此，在使用 enableTemporalAQ 字段时需要根据具体情况权衡编码质量、性能和计算资源的需求。
+        //	在 NVIDIA Video Codec (NVENC) SDK 中，_NV_ENC_RC_PARAMS 结构体中的 enableTemporalAQ 字段用于启用时域自适应量化（Temporal Adaptive Quantization）。
+        //	时域自适应量化是一种编码技术，基于视频序列中帧间相关性的变化，动态调整量化参数。与空间自适应量化（Adaptive Quantization）不同，
+        //	时域自适应量化考虑了帧间的相关性，以提高编码效率和图像质量。
+        //	enableTemporalAQ 字段的含义是是否启用时域自适应量化。如果将其设置为非零值（通常为 1），则表示启用时域自适应量化；如果将其设置为零，则表示禁用时域自适应量化。
+        //	启用时域自适应量化可以在编码过程中根据帧间相关性进行动态调整，以优化压缩效率和图像质量。
+        //	它可以根据帧间运动信息和相关性来调整量化参数，以便更好地保留运动细节和细微差异，从而提高编码效果。
+        //	需要注意的是，启用时域自适应量化可能会增加编码器的计算复杂性，并可能对编码性能产生一定的影响。
+        //	因此，在使用 enableTemporalAQ 字段时需要根据具体情况权衡编码质量、性能和计算资源的需求。
 
         // 这里先不启用
-        // encodeConfig.rcParams.enableTemporalAQ = 1;
+        // encode_config.rcParams.enableTemporalAQ = 1;
 
-//  qp 通常情况下，QP（量化参数）值越大，编码质量越差
-//	QP参数调节，指的是量化参数调节。它主要是来调节图像的细节，最终达到调节画面质量的作用。
-//	QP值和比特率成反比，QP值越小画面质量越高；反之QP值越大，画面质量越低。
-//	而且随着视频源复杂度，这种反比的关系会更加明显。QP调节是改变画面质量最常用的手段之一
-//
-//	在 NVIDIA Video Codec (NVENC) SDK 中，constQP、maxQP 和 minQP 是用于控制量化参数（QP）的配置参数。
-//	constQP：指定恒定量化参数（Constant QP），即所有帧使用相同的固定量化参数值。这是一种简单的编码模式，
-//	可以提供一致的编码质量，但无法根据图像内容进行自适应调整。
-//	maxQP 和 minQP：用于指定动态量化参数的范围，即允许的最大和最小量化参数值。编码器可以在该范围内根据图像内容进行自适应调整，以平衡压缩率和图像质量。
-//这三个参数之间的关系是：
-//	maxQP 必须大于或等于 minQP，以确保范围的有效性。
-//	constQP 可以设置为介于 maxQP 和 minQP 之间的任意值，即在动态量化参数范围内选择一个恒定的值。
-//	如果同时设置了 constQP 和动态量化参数范围（maxQP 和 minQP），编码器将优先使用 constQP 的值，并忽略动态范围的调整。
-//	总结起来，constQP 提供了一个固定的量化参数值，而 maxQP 和 minQP 定义了动态范围，允许编码器根据图像内容进行自适应调整。
-//	这些参数的使用取决于应用的需求和目标，需要权衡编码质量、压缩率和资源消耗。
+        //  qp 通常情况下，QP（量化参数）值越大，编码质量越差
+        //	QP参数调节，指的是量化参数调节。它主要是来调节图像的细节，最终达到调节画面质量的作用。
+        //	QP值和比特率成反比，QP值越小画面质量越高；反之QP值越大，画面质量越低。
+        //	而且随着视频源复杂度，这种反比的关系会更加明显。QP调节是改变画面质量最常用的手段之一
+        //
+        //	在 NVIDIA Video Codec (NVENC) SDK 中，constQP、maxQP 和 minQP 是用于控制量化参数（QP）的配置参数。
+        //	constQP：指定恒定量化参数（Constant QP），即所有帧使用相同的固定量化参数值。这是一种简单的编码模式，
+        //	可以提供一致的编码质量，但无法根据图像内容进行自适应调整。
+        //	maxQP 和 minQP：用于指定动态量化参数的范围，即允许的最大和最小量化参数值。编码器可以在该范围内根据图像内容进行自适应调整，以平衡压缩率和图像质量。
+        //这三个参数之间的关系是：
+        //	maxQP 必须大于或等于 minQP，以确保范围的有效性。
+        //	constQP 可以设置为介于 maxQP 和 minQP 之间的任意值，即在动态量化参数范围内选择一个恒定的值。
+        //	如果同时设置了 constQP 和动态量化参数范围（maxQP 和 minQP），编码器将优先使用 constQP 的值，并忽略动态范围的调整。
+        //	总结起来，constQP 提供了一个固定的量化参数值，而 maxQP 和 minQP 定义了动态范围，允许编码器根据图像内容进行自适应调整。
+        //	这些参数的使用取决于应用的需求和目标，需要权衡编码质量、压缩率和资源消耗。
 
         if (encoder_config_.const_qp != -1) {
             uint32_t constQP = encoder_config_.const_qp;
-            encodeConfig.rcParams.constQP = {constQP, constQP, constQP};
+            encode_config.rcParams.constQP = {constQP, constQP, constQP};
         } else if (encoder_config_.max_qp != -1 && encoder_config_.min_qp != -1) {
             uint32_t minQP = encoder_config_.min_qp;
             uint32_t maxQP = encoder_config_.max_qp;
-            encodeConfig.rcParams.minQP = {minQP, minQP, minQP};
-            encodeConfig.rcParams.maxQP = {maxQP, maxQP, maxQP};
-            encodeConfig.rcParams.enableMinQP = 1;
-            encodeConfig.rcParams.enableMaxQP = 1;
+            encode_config.rcParams.minQP = {minQP, minQP, minQP};
+            encode_config.rcParams.maxQP = {maxQP, maxQP, maxQP};
+            encode_config.rcParams.enableMinQP = 1;
+            encode_config.rcParams.enableMaxQP = 1;
         }
     }
 

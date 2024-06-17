@@ -12,34 +12,6 @@
 
 namespace tc
 {
-#if 0
-	std::shared_ptr<VideoEncoder> VideoEncoderFactory::CreateEncoder( const VideoEncoderParams& params, ECreateEncoderPolicy policy, ECreateEncoderName name) {
-	    if (policy == ECreateEncoderPolicy::kAuto) {
-	        // 1. nvenc 12.0
-	        // 2. nvenc 8.1
-	        // 3. amf
-	        // 4. ffmpeg
-	        return nullptr;
-	    }
-	    else {
-	        if (name == ECreateEncoderName::kNVENC) {
-	            // 1. 12.0
-	            // 2. 8.1
-	            // return nullptr;
-	            return std::make_shared<NVENCVideoEncoder>(params);
-	        }
-	        else if (name == ECreateEncoderName::kAMF) {
-	            return nullptr;
-	        }
-	        else if (name == ECreateEncoderName::kFFmpeg) {
-	            LOGI("Finally, select FFmpeg as encoder.");
-	            return std::make_shared<FFmpegVideoEncoder>(params);
-	        }
-	    }
-	    return nullptr;
-	}
-#endif
-
 	std::shared_ptr<VideoEncoder> VideoEncoderFactory::CreateEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier,
                                                                      EncoderFeature feature,
                                                                      ECreateEncoderPolicy policy,
