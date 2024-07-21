@@ -1,5 +1,5 @@
 //
-// Created by Administrator on 2024/1/6.
+// Created by RGAA  on 2024/1/6.
 //
 
 #ifndef TC_APPLICATION_NVENC_VIDEO_ENCODER_H
