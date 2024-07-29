@@ -31,6 +31,7 @@ namespace tc
 
         auto encoder_id = encoder_config.codec_type == EVideoCodecType::kHEVC ? AV_CODEC_ID_HEVC : AV_CODEC_ID_H264;
         const AVCodec* encoder = avcodec_find_encoder(encoder_id);
+//        const AVCodec* encoder = avcodec_find_encoder_by_name("libx264");
 
         context_ = avcodec_alloc_context3(encoder);
         if (!context_) {
@@ -40,6 +41,8 @@ namespace tc
         context_->width = this->out_width_;
         context_->height = this->out_height_;
         context_->time_base = { 1, this->refresh_rate_ };
+        context_->framerate = { this->refresh_rate_, 1};
+        context_->flags |= AV_CODEC_FLAG_LOW_DELAY;
         context_->pix_fmt = AV_PIX_FMT_YUV420P;
         //context_->thread_count = std::min((int)std::thread::hardware_concurrency()/2, X265_MAX_FRAME_THREADS);
         context_->thread_count = std::min(16, (int)std::thread::hardware_concurrency());
@@ -49,18 +52,33 @@ namespace tc
         context_->bit_rate = 10000000; // 10Mbps
 
         if(-1 == encoder_config.gop_size) {
-            context_->gop_size = 60;
+            context_->gop_size = 180;
         }
-        context_->bit_rate = encoder_config.bitrate;
-        context_->max_b_frames = 0;
+        //context_->bit_rate = encoder_config.bitrate;
 
         LOGI("ffmpeg encoder config:");
         LOGI("bitrate: {}", context_->bit_rate);
         LOGI("format: {}", (encoder_config.codec_type == EVideoCodecType::kHEVC ? "HEVC" : "H264"));
         LOGI("refresh rate(fps): {}", this->refresh_rate_);
         LOGI("thread count: {}", context_->thread_count);
+        LOGI("gop size: {}", context_->gop_size);
 
-        auto ret = avcodec_open2(context_, encoder, NULL);
+        AVDictionary* param = nullptr;
+        if(encoder_id == AV_CODEC_ID_H264) {
+            //av_dict_set(&param, "preset", "superfast",   0);
+            av_dict_set(&param, "preset", "ultrafast",   0);
+            av_dict_set(&param, "tune",   "zerolatency", 0);
+            av_dict_set(&param, "crf", "23", 0);
+            av_dict_set(&param, "forced-idr", "1", 0);
+            LOGI("Set AVDictionary....");
+        }
+        if(encoder_id == AV_CODEC_ID_H265) {
+            av_dict_set(&param, "x265-params", "qp=20", 0);
+            av_dict_set(&param, "preset", "ultrafast", 0);
+            av_dict_set(&param, "tune", "zero-latency", 0);
+        }
+
+        auto ret = avcodec_open2(context_, encoder, &param);
         if (ret != 0) {
             LOGE("avcodec_open2 error : {}", ret);
             return false;
@@ -167,12 +185,12 @@ namespace tc
         } else {
             libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
         }
-        LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+        //LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
 
         beg = TimeExt::GetCurrentTimestamp();
         auto image = Image::Make(capture_data_, width, height, 3);
         this->Encode(image, frame_index);
-        LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+        //LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
     }
 
     void FFmpegVideoEncoder::Exit() {
