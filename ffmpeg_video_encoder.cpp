@@ -9,6 +9,9 @@
 #include "tc_common_new/log.h"
 #include "tc_common_new/data.h"
 #include "tc_common_new/image.h"
+#include "tc_common_new/win32/d3d_debug_helper.h"
+#include "tc_common_new/file.h"
+#include "tc_common_new/time_ext.h"
 
 namespace tc
 {
@@ -50,6 +53,12 @@ namespace tc
         }
         context_->bit_rate = encoder_config.bitrate;
         context_->max_b_frames = 0;
+
+        LOGI("ffmpeg encoder config:");
+        LOGI("bitrate: {}", context_->bit_rate);
+        LOGI("format: {}", (encoder_config.codec_type == EVideoCodecType::kHEVC ? "HEVC" : "H264"));
+        LOGI("refresh rate(fps): {}", this->refresh_rate_);
+        LOGI("thread count: {}", context_->thread_count);
 
         auto ret = avcodec_open2(context_, encoder, NULL);
         if (ret != 0) {
@@ -109,6 +118,63 @@ namespace tc
         }
     }
 
+    void FFmpegVideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
+        auto beg = TimeExt::GetCurrentTimestamp();
+        ComPtr<ID3D11Texture2D> shared_texture;
+        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(handle));
+        if (!shared_texture) {
+            LOGE("OpenSharedTexture failed.");
+            return;
+        }
+        D3D11_TEXTURE2D_DESC desc;
+        shared_texture->GetDesc(&desc);
+
+        if (!CopyID3D11Texture2D(shared_texture)) {
+            LOGE("Copy texture failed!");
+            return;
+        }
+
+        CComPtr<IDXGISurface> staging_surface = nullptr;
+        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
+        if (FAILED(hr)) {
+            LOGE("!QueryInterface(IDXGISurface) err");
+            return;
+        }
+        DXGI_MAPPED_RECT mapped_rect{};
+        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+        if (FAILED(hr)) {
+            LOGE("!Map(IDXGISurface)");
+            return;
+        }
+
+        int width = desc.Width;
+        int height = desc.Height;
+        int target_data_size = 1.5 * width * height;
+        if (!capture_data_ || capture_data_->Size() != target_data_size) {
+            capture_data_ = Data::Make(nullptr, target_data_size);
+        }
+        size_t pixel_size = width * height;
+
+        const int uv_stride = width >> 1;
+        auto y = (uint8_t*)capture_data_->DataAddr();
+        auto u = y + pixel_size;
+        auto v = u + (pixel_size >> 2);
+
+        if (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format) {
+            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+        } else if (DXGI_FORMAT_R8G8B8A8_UNORM == desc.Format) {
+            libyuv::ABGRToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+        } else {
+            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+        }
+        LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+
+        beg = TimeExt::GetCurrentTimestamp();
+        auto image = Image::Make(capture_data_, width, height, 3);
+        this->Encode(image, frame_index);
+        LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+    }
+
     void FFmpegVideoEncoder::Exit() {
         VideoEncoder::Exit();
     }
@@ -117,11 +183,11 @@ namespace tc
         const AVCodec *codec = nullptr;
         void *opaque = nullptr;
 
-        LOGI("Available codecs:");
+        //LOGI("Available codecs:");
         while ((codec = av_codec_iterate(&opaque)) != nullptr) {
             if (codec->type == AVMEDIA_TYPE_VIDEO || codec->type == AVMEDIA_TYPE_AUDIO) {
                 if (av_codec_is_encoder(codec)) {
-                    LOGI("Encoder: {}", codec->name);
+                    //LOGI("Encoder: {}", codec->name);
                 }
                 if (av_codec_is_decoder(codec)) {
                     //LOGI("Decoder: {}", codec->name);

@@ -13,6 +13,8 @@ extern "C" {
 
 namespace tc
 {
+    class Data;
+
     class FFmpegVideoEncoder : public VideoEncoder {
     public:
         FFmpegVideoEncoder(const std::shared_ptr<MessageNotifier>& msg_notifier, const EncoderFeature& encoder_feature);
@@ -20,6 +22,7 @@ namespace tc
 
         bool Initialize(const tc::EncoderConfig& config) override;
         void Encode(const std::shared_ptr<Image>& i420_image, uint64_t frame_index) override;
+        void Encode(uint64_t handle, uint64_t frame_index) override;
         void Exit() override;
 
     private:
@@ -29,6 +32,7 @@ namespace tc
         AVCodecContext* context_ = nullptr;
         AVFrame* frame_ = nullptr;
         AVPacket* packet_ = nullptr;
+        std::shared_ptr<Data> capture_data_ = nullptr;
     };
 
 }

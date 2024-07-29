@@ -140,7 +140,7 @@ namespace tc
 
     bool VideoEncoder::CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture) {
         if (!D3D11Texture2DLockMutex(shared_texture)) {
-            printf("D3D11Texture2DLockMutex error\n");
+            LOGE("D3D11Texture2DLockMutex error");
             return false;
         }
         std::shared_ptr<void> auto_realse_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
@@ -180,11 +180,13 @@ namespace tc
             createDesc.MipLevels = 1;
             createDesc.ArraySize = 1;
             createDesc.SampleDesc.Count = 1;
-            createDesc.Usage = D3D11_USAGE_DEFAULT;
-            createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+            //createDesc.Usage = D3D11_USAGE_DEFAULT;
+            //createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+            createDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            createDesc.Usage = D3D11_USAGE_STAGING;
             hres = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf());
             if (FAILED(hres)) {
-                printf("desktop capture create texture failed with:%s", StringExt::GetErrorStr(hres).c_str());
+                LOGE("desktop capture create texture failed with:{}", StringExt::GetErrorStr(hres).c_str());
                 return false;
             }
         }
