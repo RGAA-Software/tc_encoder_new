@@ -38,11 +38,11 @@ namespace tc
         };
 
 	    if (policy == ECreateEncoderPolicy::kAuto) {
-            //auto encoder = fn_create_nvenc();
-            //if (!encoder) {
-            //    encoder = fn_create_ffmpeg();
-            //}
-            auto encoder = fn_create_ffmpeg();
+            auto encoder = fn_create_nvenc();
+            if (!encoder) {
+                encoder = fn_create_ffmpeg();
+            }
+            //auto encoder = fn_create_ffmpeg();
             //auto encoder = fn_create_nvenc();
             return encoder;
 	    }
