@@ -2,8 +2,8 @@
 #include "tc_common_new/data.h"
 #include "tc_common_new/log.h"
 
-LegacyVideoEncoder::LegacyVideoEncoder() {
-
+LegacyVideoEncoder::LegacyVideoEncoder(EVideoCodecType codec) {
+    codec_type_ = codec;
 }
 
 void LegacyVideoEncoder::InsertIDR() {

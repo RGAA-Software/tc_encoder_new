@@ -70,7 +70,6 @@ namespace tc
             av_dict_set(&param, "tune",   "zerolatency", 0);
             av_dict_set(&param, "crf", "23", 0);
             av_dict_set(&param, "forced-idr", "1", 0);
-            LOGI("Set AVDictionary....");
         }
         if(encoder_id == AV_CODEC_ID_H265) {
             av_dict_set(&param, "x265-params", "qp=20", 0);

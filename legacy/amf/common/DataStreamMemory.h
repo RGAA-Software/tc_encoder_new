@@ -9,7 +9,7 @@
 // 
 // MIT license 
 // 
-// Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,30 +30,48 @@
 // THE SOFTWARE.
 //
 
-/**
-***************************************************************************************************
-* @file  Version.h
-* @brief Version declaration
-***************************************************************************************************
-*/
-#ifndef AMF_Version_h
-#define AMF_Version_h
+#ifndef AMF_DataStreamMemory_h
+#define AMF_DataStreamMemory_h
+
 #pragma once
 
-#include "Platform.h"
+#include "DataStream.h"
+#include "InterfaceImpl.h"
 
-#define AMF_MAKE_FULL_VERSION(VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE, VERSION_BUILD_NUM)    ( ((amf_uint64)(VERSION_MAJOR) << 48ull) | ((amf_uint64)(VERSION_MINOR) << 32ull) | ((amf_uint64)(VERSION_RELEASE) << 16ull)  | (amf_uint64)(VERSION_BUILD_NUM))
+namespace amf
+{
+    class AMFDataStreamMemoryImpl : public AMFInterfaceImpl<AMFDataStream>
+    {
+    public:
+        AMFDataStreamMemoryImpl();
+        virtual ~AMFDataStreamMemoryImpl();
+        // interface
+        virtual AMF_RESULT AMF_STD_CALL Open(const wchar_t* /*pFileUrl*/, AMF_STREAM_OPEN /*eOpenType*/, AMF_FILE_SHARE /*eShareType*/)
+        {
+            //pFileUrl;
+            //eOpenType;
+            //eShareType;
+            return AMF_OK;
+        }
+        virtual AMF_RESULT AMF_STD_CALL Close();
+        virtual AMF_RESULT AMF_STD_CALL Read(void* pData, amf_size iSize, amf_size* pRead);
+        virtual AMF_RESULT AMF_STD_CALL Write(const void* pData, amf_size iSize, amf_size* pWritten);
+        virtual AMF_RESULT AMF_STD_CALL Seek(AMF_SEEK_ORIGIN eOrigin, amf_int64 iPosition, amf_int64* pNewPosition);
+        virtual AMF_RESULT AMF_STD_CALL GetPosition(amf_int64* pPosition);
+        virtual AMF_RESULT AMF_STD_CALL GetSize(amf_int64* pSize);
+        virtual bool       AMF_STD_CALL IsSeekable();
 
-#define AMF_GET_MAJOR_VERSION(x)      ((x >> 48ull) & 0xFFFF)
-#define AMF_GET_MINOR_VERSION(x)      ((x >> 32ull) & 0xFFFF)
-#define AMF_GET_SUBMINOR_VERSION(x)   ((x >> 16ull) & 0xFFFF)
-#define AMF_GET_BUILD_VERSION(x)      ((x >>  0ull) & 0xFFFF)
+    protected:
+        AMF_RESULT Realloc(amf_size iSize);
 
-#define AMF_VERSION_MAJOR       1
-#define AMF_VERSION_MINOR       4
-#define AMF_VERSION_RELEASE     26
-#define AMF_VERSION_BUILD_NUM   0
+        amf_uint8* m_pMemory;
+        amf_size m_uiMemorySize;
+        amf_size m_uiAllocatedSize;
+        amf_size m_pos;
+    private:
+        AMFDataStreamMemoryImpl(const AMFDataStreamMemoryImpl&);
+        AMFDataStreamMemoryImpl& operator=(const AMFDataStreamMemoryImpl&);
+    };
+} //namespace amf
 
-#define AMF_FULL_VERSION AMF_MAKE_FULL_VERSION(AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE, AMF_VERSION_BUILD_NUM)
-
-#endif //#ifndef AMF_Version_h
+#endif // AMF_DataStreamMemory_h

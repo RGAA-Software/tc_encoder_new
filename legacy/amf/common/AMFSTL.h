@@ -1,4 +1,4 @@
-// 
+//
 // Notice Regarding Standards.  AMD does not provide a license or sublicense to
 // any Intellectual Property Rights relating to any standards, including but not
 // limited to any audio and/or video codec technologies such as MPEG-2, MPEG-4;
@@ -6,10 +6,11 @@
 // (collectively, the "Media Technologies"). For clarity, you will pay any
 // royalties due for such third party technologies, which may include the Media
 // Technologies that are owed as a result of AMD providing the Software to you.
-// 
-// MIT license 
-// 
-// Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved.
+//
+// MIT license
+//
+//
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +31,8 @@
 // THE SOFTWARE.
 //
 
-#ifndef __AMFSTL_h__
-#define __AMFSTL_h__
+#ifndef AMF_AMFSTL_h
+#define AMF_AMFSTL_h
 #pragma once
 
 #if defined(__GNUC__)
@@ -41,8 +42,6 @@
     #include <memory>  //default stl allocator
 #else
     #include <xmemory>  //default stl allocator
-    //#include <memory>
-
 #endif
 
 #include <algorithm>
@@ -86,13 +85,13 @@ namespace amf
         {
             typedef amf_allocator<_Other> other;
         };
-        void deallocate(/*typename std::allocator<_Ty>::pointer*/_Ty* _Ptr, typename std::allocator<_Ty>::size_type)
+        void deallocate(typename std::allocator<_Ty>::pointer _Ptr, typename std::allocator<_Ty>::size_type)
         {
             amf_free((void*)_Ptr);
         }
-        typename /*std::allocator<_Ty>::pointer*/_Ty* allocate(typename std::allocator<_Ty>::size_type _Count)
+        typename std::allocator<_Ty>::pointer allocate(typename std::allocator<_Ty>::size_type _Count)
         { // allocate array of _Count el ements
-            return static_cast</*typename std::allocator<_Ty>::pointer*/_Ty*>((amf_alloc(_Count * sizeof(_Ty))));
+            return static_cast<typename std::allocator<_Ty>::pointer>((amf_alloc(_Count * sizeof(_Ty))));
         }
     };
 
@@ -102,7 +101,7 @@ namespace amf
     //-------------------------------------------------------------------------------------------------
     // STL container templates with changed memory allocation
     //-------------------------------------------------------------------------------------------------
-    template<typename _Ty>
+    template<class _Ty>
     class amf_vector
         : public std::vector<_Ty, amf_allocator<_Ty> >
     {
@@ -114,32 +113,32 @@ namespace amf
     amf_vector(size_t _Count, const _Ty& _Val) : _base(_Count,_Val) {}
     };
 
-    template<typename _Ty>
+    template<class _Ty>
     class amf_list
         : public std::list<_Ty, amf_allocator<_Ty> >
     {};
 
-    template<typename _Ty>
+    template<class _Ty>
     class amf_deque
         : public std::deque<_Ty, amf_allocator<_Ty> >
     {};
 
-    template<typename _Ty>
+    template<class _Ty>
     class amf_queue
         : public std::queue<_Ty, amf_deque<_Ty> >
     {};
 
-    template<typename _Kty, class _Ty, class _Pr = std::less<_Kty> >
+    template<class _Kty, class _Ty, class _Pr = std::less<_Kty> >
     class amf_map
-        : public std::map<_Kty, _Ty, _Pr, amf_allocator<_Ty> >
+        : public std::map<_Kty, _Ty, _Pr, amf_allocator<std::pair<const _Kty, _Ty>> >
     {};
 
-    template<typename _Kty, class _Pr = std::less<_Kty> >
+    template<class _Kty, class _Pr = std::less<_Kty> >
     class amf_set
         : public std::set<_Kty, _Pr, amf_allocator<_Kty> >
     {};
 
-    template<typename _Ty>
+    template<class _Ty>
     class amf_limited_deque
         : public amf_deque<_Ty> // circular queue of pointers to blocks
     {
@@ -207,7 +206,7 @@ namespace amf
     #pragma GCC diagnostic ignored "-Weffc++"
 #endif
 
-    template<typename _Interf>
+    template<class _Interf>
     class AMFInterfacePtr_TAdapted : public AMFInterfacePtr_T<_Interf>
     {
     public:
@@ -229,7 +228,7 @@ namespace amf
         {}
     };
 
-    template<typename _Interf>
+    template<class _Interf>
     class amf_vector<AMFInterfacePtr_T<_Interf> >
         : public std::vector<AMFInterfacePtr_TAdapted<_Interf>, amf_allocator<AMFInterfacePtr_TAdapted<_Interf> > >
     {
@@ -242,12 +241,12 @@ namespace amf
         }
     };
 
-    template<typename _Interf>
+    template<class _Interf>
     class amf_deque<AMFInterfacePtr_T<_Interf> >
         : public std::deque<AMFInterfacePtr_TAdapted<_Interf>, amf_allocator<AMFInterfacePtr_TAdapted<_Interf> > >
     {};
 
-    template<typename _Interf>
+    template<class _Interf>
     class amf_list<AMFInterfacePtr_T<_Interf> >
         : public std::list<AMFInterfacePtr_TAdapted<_Interf>, amf_allocator<AMFInterfacePtr_TAdapted<_Interf> > >
     {};
@@ -311,5 +310,5 @@ namespace amf
     #pragma GCC diagnostic pop
 #endif
 
-#endif // __AMFSTL_h__
+#endif // AMF_AMFSTL_h
 
