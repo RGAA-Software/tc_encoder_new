@@ -5,6 +5,7 @@
 #include "shared/d3drender.h" 
 #include "EncodeDataCallback.h"
 #include "tc_common_new/time_ext.h"
+#include "tc_encoder_new/encoder_config.h"
 
 typedef std::function<void(bool)> OnInitEncoderCallback;
 
@@ -17,7 +18,7 @@ namespace tc {
 class LegacyVideoEncoder
 {
 public:
-    LegacyVideoEncoder( );
+    LegacyVideoEncoder(EVideoCodecType codec);
 
 	virtual bool Initialize() = 0;
 	virtual void Shutdown() = 0;
@@ -38,7 +39,6 @@ protected:
 	virtual void OnInitFailed();
 
 protected:
-
 	int gop = 60;
 	bool insert_idr = false;
 
@@ -49,4 +49,5 @@ protected:
 
 	int fps = 0;
 	uint64_t last_update_time = TimeExt::GetCurrentTimestamp();
+    EVideoCodecType codec_type_;
 };

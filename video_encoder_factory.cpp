@@ -7,6 +7,7 @@
 #include "nvenc_video_encoder.h"
 #include "tc_common_new/log.h"
 #include "video_encoder.h"
+#include "tc_encoder_new/legacy/VideoEncoderVCE.h"
 
 #include <memory>
 
@@ -37,8 +38,19 @@ namespace tc
             return encoder;
         };
 
+        auto fn_create_amf = [=]() -> std::shared_ptr<VideoEncoder> {
+            auto encoder = std::make_shared<VideoEncoderVCE>(msg_notifier, feature);
+            if (!encoder->Initialize(config)) {
+                return nullptr;
+            }
+            return encoder;
+        };
+
 	    if (policy == ECreateEncoderPolicy::kAuto) {
             auto encoder = fn_create_nvenc();
+            if (!encoder) {
+                encoder = fn_create_amf();
+            }
             if (!encoder) {
                 encoder = fn_create_ffmpeg();
             }
@@ -51,7 +63,7 @@ namespace tc
                 return fn_create_nvenc();
 	        }
 	        else if (name == ECreateEncoderName::kAMF) {
-	            return nullptr;
+	            return fn_create_amf();
 	        }
 	        else if (name == ECreateEncoderName::kFFmpeg) {
                 return fn_create_ffmpeg();

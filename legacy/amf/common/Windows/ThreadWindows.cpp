@@ -9,7 +9,7 @@
 // 
 // MIT license 
 // 
-// Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,10 +30,12 @@
 // THE SOFTWARE.
 //
 
+
 #include "../Thread.h"
+
+#ifdef _WIN32
+
 #include <timeapi.h>
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 //----------------------------------------------------------------------------------------
 // threading
@@ -70,6 +72,27 @@ bool AMF_CDECL_CALL amf_enter_critical_section(amf_handle cs)
 {
     ::EnterCriticalSection((CRITICAL_SECTION*)cs);
     return true; // in Win32 - no errors
+}
+//----------------------------------------------------------------------------------------
+bool AMF_CDECL_CALL amf_wait_critical_section(amf_handle cs, amf_ulong ulTimeout)
+{
+    while (true)
+    {
+        const BOOL success = ::TryEnterCriticalSection((CRITICAL_SECTION*)cs);
+        if (success == TRUE)
+        {
+            return true; // in Win32 - no errors
+        }
+        if (ulTimeout == 0)
+        {
+            return false;
+        }
+
+        amf_sleep(1);
+        ulTimeout--;
+    }
+
+    return false;
 }
 //----------------------------------------------------------------------------------------
 bool AMF_CDECL_CALL amf_leave_critical_section(amf_handle cs)
@@ -229,6 +252,8 @@ amf_pts AMF_CDECL_CALL amf_high_precision_clock()
     static int state = 0;
     static LARGE_INTEGER Frequency;
     static LARGE_INTEGER StartCount;
+    static amf_pts offset = 0;
+
     if(state == 0)
     {
         if(QueryPerformanceFrequency(&Frequency))
@@ -246,7 +271,20 @@ amf_pts AMF_CDECL_CALL amf_high_precision_clock()
         LARGE_INTEGER PerformanceCount;
         if(QueryPerformanceCounter(&PerformanceCount))
         {
-            return static_cast<amf_pts>((PerformanceCount.QuadPart - StartCount.QuadPart) * 10000000LL / Frequency.QuadPart);
+            amf_pts elapsed = static_cast<amf_pts>((PerformanceCount.QuadPart - StartCount.QuadPart) * 10000000LL / Frequency.QuadPart);
+
+            // periodically reset StartCount in order to avoid overflow
+            if (elapsed > (3600LL * AMF_SECOND))
+            {
+                offset += elapsed;
+                StartCount = PerformanceCount;
+
+                return offset;
+            }
+            else
+            {
+                return offset + elapsed;
+            }
         }
     }
 #if defined(METRO_APP)
@@ -305,18 +343,26 @@ void AMF_CDECL_CALL amf_restore_timer_precision()
 #endif
 }
 //----------------------------------------------------------------------------------------
+amf_handle  AMF_CDECL_CALL amf_load_library1(const wchar_t* filename, bool /*bGlobal*/)
+{
+    return amf_load_library(filename);
+}
+//----------------------------------------------------------------------------------------
 amf_handle AMF_CDECL_CALL amf_load_library(const wchar_t* filename)
 {
 #if defined(METRO_APP)
     return LoadPackagedLibrary(filename, 0);
 #else
-    return ::LoadLibraryW(filename);
+	return ::LoadLibraryExW(filename, NULL, LOAD_LIBRARY_SEARCH_USER_DIRS |
+		LOAD_LIBRARY_SEARCH_APPLICATION_DIR |
+		LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
+		LOAD_LIBRARY_SEARCH_SYSTEM32);
 #endif
 }
 //----------------------------------------------------------------------------------------
 void* AMF_CDECL_CALL amf_get_proc_address(amf_handle module, const char* procName)
 {
-    return ::GetProcAddress((HMODULE)module, procName);
+    return (void*)::GetProcAddress((HMODULE)module, procName);
 }
 //----------------------------------------------------------------------------------------
 int AMF_CDECL_CALL amf_free_library(amf_handle module)
@@ -339,3 +385,4 @@ void AMF_CDECL_CALL amf_virtual_free(void* ptr)
 #endif //#if !defined(METRO_APP)//----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
+#endif // _WIN32

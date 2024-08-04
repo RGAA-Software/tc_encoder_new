@@ -1,4 +1,4 @@
-// 
+//
 // Notice Regarding Standards.  AMD does not provide a license or sublicense to
 // any Intellectual Property Rights relating to any standards, including but not
 // limited to any audio and/or video codec technologies such as MPEG-2, MPEG-4;
@@ -6,10 +6,11 @@
 // (collectively, the "Media Technologies"). For clarity, you will pay any
 // royalties due for such third party technologies, which may include the Media
 // Technologies that are owed as a result of AMD providing the Software to you.
-// 
-// MIT license 
-// 
-// Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved.
+//
+// MIT license
+//
+//
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +31,9 @@
 // THE SOFTWARE.
 //
 
+#ifndef AMF_AMFFactory_h
+#define AMF_AMFFactory_h
+
 #pragma once
 
 #include "../include/core/Factory.h"
@@ -43,7 +47,7 @@ public:
     AMFFactoryHelper();
     virtual ~AMFFactoryHelper();
 
-    AMF_RESULT  Init();
+    AMF_RESULT  Init(const wchar_t* dllName = NULL);
     AMF_RESULT  Terminate();
 
     AMF_RESULT  LoadExternalComponent(amf::AMFContext* pContext, const wchar_t* dll, const char* function, void* reserved, amf::AMFComponent** ppComponent);
@@ -54,10 +58,12 @@ public:
     amf::AMFTrace* GetTrace();
 
     amf_uint64 AMFQueryVersion();
+
+    amf_handle    GetAMFDLLHandle() { return m_hDLLHandle; }
 protected:
     struct ComponentHolder
     {
-        HMODULE         m_hDLLHandle;
+        amf_handle      m_hDLLHandle;
         amf_long        m_iRefCount;
         std::wstring    m_DLL;
 
@@ -68,7 +74,7 @@ protected:
         }
     };
 
-    HMODULE             m_hDLLHandle;
+    amf_handle          m_hDLLHandle;
     amf::AMFFactory*    m_pFactory;
     amf::AMFDebug*      m_pDebug;
     amf::AMFTrace*      m_pTrace;
@@ -80,3 +86,4 @@ protected:
 };
 
 extern ::AMFFactoryHelper g_AMFFactory;
+#endif // AMF_AMFFactory_h

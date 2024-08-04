@@ -17,7 +17,7 @@
 using namespace tc;
 
 VideoEncoderNVENC::VideoEncoderNVENC(std::shared_ptr<CD3DRender> pD3DRender, EncodeDataCallback data_cbk, bool useNV12, int width, int height)
-	: LegacyVideoEncoder(), m_pD3DRender(pD3DRender)
+	: LegacyVideoEncoder(EVideoCodecType::kH264), m_pD3DRender(pD3DRender)
 	, m_nFrame(0)
 	, m_useNV12(useNV12)
 {
@@ -198,7 +198,7 @@ void VideoEncoderNVENC::Transmit(ID3D11Device* device, ID3D11DeviceContext* cont
 
 }
 
-void Delay(int time)//time*1000Ϊ���� 
+void Delay(int time)
 {
 	clock_t now = clock();
 	while (clock() - now < time);

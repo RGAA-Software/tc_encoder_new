@@ -9,7 +9,7 @@
 // 
 // MIT license 
 // 
-// Copyright (c) 2016 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +30,8 @@
 // THE SOFTWARE.
 //
 
-#ifndef __AMFResult_h__
-#define __AMFResult_h__
+#ifndef AMF_Result_h
+#define AMF_Result_h
 #pragma once
 
 #include "Platform.h"
@@ -40,7 +40,7 @@
 // result codes
 //----------------------------------------------------------------------------------------------
 
-enum AMF_RESULT
+typedef enum AMF_RESULT
 {
     AMF_OK                                   = 0,
     AMF_FAIL                                    ,
@@ -121,7 +121,7 @@ enum AMF_RESULT
     AMF_TAN_CLIPPING_WAS_REQUIRED               , // Resulting data was truncated to meet output type's value limits.
     AMF_TAN_UNSUPPORTED_VERSION                 , // Not supported version requested, solely for TANCreateContext().
 
-    AMF_NEED_MORE_INPUT                         ,//returned by AMFComponent::SubmitInput did not produce buffer
-};
+    AMF_NEED_MORE_INPUT                         ,//returned by AMFComponent::SubmitInput did not produce a buffer because more input submissions are required.
+} AMF_RESULT;
 
-#endif //#ifndef __AMFResult_h__
+#endif //#ifndef AMF_Result_h
