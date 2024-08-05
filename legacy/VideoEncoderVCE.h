@@ -18,20 +18,19 @@ namespace tc
 {
     class AMFTextureEncoder {
     public:
-        AMFTextureEncoder(const amf::AMFContextPtr &amfContext, int width, int height,
-                          amf::AMF_SURFACE_FORMAT inputFormat, AMFTextureReceiver receiver, EVideoCodecType codec);
+        AMFTextureEncoder(const amf::AMFContextPtr &amfContext, EncoderConfig config,
+                          amf::AMF_SURFACE_FORMAT inputFormat, AMFTextureReceiver receiver);
         ~AMFTextureEncoder();
         void Start();
         void Shutdown();
         void Submit(amf::AMFData *data);
+        void Run();
 
     private:
-        amf::AMFComponentPtr m_amfEncoder;
-        std::thread* m_thread = nullptr;
-        AMFTextureReceiver m_receiver;
-        EVideoCodecType m_codec;
-
-        void Run();
+        amf::AMFComponentPtr amf_encoder_ = nullptr;
+        std::thread* thread_ = nullptr;
+        AMFTextureReceiver receiver_;
+        EVideoCodecType codec_;
     };
 
     class AMFTextureConverter {
@@ -43,13 +42,12 @@ namespace tc
         void Start();
         void Shutdown();
         void Submit(amf::AMFData *data);
+        void Run();
 
     private:
-        amf::AMFComponentPtr m_amfConverter;
-        std::thread* m_thread = nullptr;
-        AMFTextureReceiver m_receiver;
-
-        void Run();
+        amf::AMFComponentPtr amf_converter_ = nullptr;
+        std::thread* thread_ = nullptr;
+        AMFTextureReceiver receiver_;
     };
 
     // Video encoder for AMD VCE.
@@ -69,23 +67,19 @@ namespace tc
     private:
         void EncodeTextureHandle(uint64_t handle, uint64_t frame_index);
         void ApplyFrameProperties(const amf::AMFSurfacePtr &surface, bool insertIDR);
-        void SkipAUD(char **buffer, int *length);
+        void SkipAUD(char** buffer, int* length);
+        void EncodeTexture(ID3D11Texture2D* texture, int width, int height, int64_t frame_idx);
 
     private:
-        amf::AMF_SURFACE_FORMAT convert_input_format = amf::AMF_SURFACE_BGRA;// AMF_SURFACE_RGBA;
-        amf::AMF_SURFACE_FORMAT encoder_input_format = amf::AMF_SURFACE_BGRA;// amf::AMF_SURFACE_NV12;
-
-        static const wchar_t *START_TIME_PROPERTY;
-        static const wchar_t *FRAME_INDEX_PROPERTY;
-        static const wchar_t *IS_KEY_FRAME;
-
-        amf::AMFContextPtr m_amfContext = nullptr;
-        std::shared_ptr<AMFTextureEncoder> m_encoder = nullptr;
-        std::shared_ptr<AMFTextureConverter> m_converter = nullptr;
-        std::ofstream fpOut;
-        EVideoCodecType codec_type_;
-        bool insert_idr = false;
-        int gop = 60;
+        amf::AMF_SURFACE_FORMAT convert_input_format_ = amf::AMF_SURFACE_BGRA;// AMF_SURFACE_RGBA;
+        amf::AMF_SURFACE_FORMAT encoder_input_format_ = amf::AMF_SURFACE_BGRA;// amf::AMF_SURFACE_NV12;
+        amf::AMFContextPtr amf_context_ = nullptr;
+        std::shared_ptr<AMFTextureEncoder> encoder_ = nullptr;
+        std::shared_ptr<AMFTextureConverter> converter_ = nullptr;
+        EVideoCodecType codec_type_{};
+        bool insert_idr_ = false;
+        int gop_ = 180;
+        std::ofstream dbg_file_;
     };
 
 }
