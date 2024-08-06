@@ -1,5 +1,5 @@
 ﻿find_package(unofficial-libvpx CONFIG REQUIRED)
-find_package(libyuv CONFIG REQUIRED)
+#find_package(libyuv CONFIG REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -52,6 +52,7 @@ namespace tc
                 encoder = fn_create_amf();
             }
             if (!encoder) {
+                // todo: Can't resize frame now...
                 encoder = fn_create_ffmpeg();
             }
             //auto encoder = fn_create_ffmpeg();
