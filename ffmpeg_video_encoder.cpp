@@ -13,6 +13,8 @@
 #include "tc_common_new/file.h"
 #include "tc_common_new/time_ext.h"
 
+#include <Winerror.h>
+
 namespace tc
 {
 
@@ -157,10 +159,11 @@ namespace tc
             LOGE("!QueryInterface(IDXGISurface) err");
             return;
         }
+        // E_OUTOFMEMORY
         DXGI_MAPPED_RECT mapped_rect{};
         hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
         if (FAILED(hr)) {
-            LOGE("!Map(IDXGISurface)");
+            LOGE("!Map(IDXGISurface) 0x{:x}", (uint32_t)hr);
             return;
         }
 

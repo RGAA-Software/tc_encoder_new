@@ -143,7 +143,7 @@ namespace tc
             LOGE("D3D11Texture2DLockMutex error");
             return false;
         }
-        std::shared_ptr<void> auto_realse_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
+        std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
             D3D11Texture2DReleaseMutex(shared_texture);
         });
 
