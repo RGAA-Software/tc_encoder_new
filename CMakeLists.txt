@@ -6,8 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 #find_package(libyuv CONFIG REQUIRED)
 #find_package(FFMPEG REQUIRED)
 
+set(FFMPEG_LIB_PATH ${CMAKE_SOURCE_DIR}/deps/tc_3rdparty/ffmpeg/lib/x64)
 include_directories(${CMAKE_SOURCE_DIR}/deps/tc_3rdparty/ffmpeg/include)
-link_directories(${CMAKE_SOURCE_DIR}/deps/tc_3rdparty/ffmpeg/lib/x64)
+link_directories(${FFMPEG_LIB_PATH})
 
 set(NVSDK_VERSION
     12
@@ -41,6 +42,8 @@ add_library(tc_encoder_new ${SRCS})
 target_link_libraries(tc_encoder_new)#yuv
 #target_include_directories(tc_encoder_new PRIVATE ${FFMPEG_INCLUDE_DIRS})
 #target_link_directories(tc_encoder_new PRIVATE ${FFMPEG_LIBRARY_DIRS})
-target_link_libraries(tc_encoder_new avcodec.lib avdevice.lib avfilter.lib avformat.lib avutil.lib swresample.lib swscale.lib postproc.lib tc_opus_codec_new frame_render)#${FFMPEG_LIBRARIES}
+target_link_libraries(tc_encoder_new ${FFMPEG_LIB_PATH}/avcodec.lib ${FFMPEG_LIB_PATH}/avdevice.lib ${FFMPEG_LIB_PATH}/avfilter.lib
+        ${FFMPEG_LIB_PATH}/avformat.lib ${FFMPEG_LIB_PATH}/avutil.lib ${FFMPEG_LIB_PATH}/swresample.lib ${FFMPEG_LIB_PATH}/swscale.lib
+        ${FFMPEG_LIB_PATH}/postproc.lib tc_opus_codec_new frame_render)#${FFMPEG_LIBRARIES}
 
 add_subdirectory(tests)
