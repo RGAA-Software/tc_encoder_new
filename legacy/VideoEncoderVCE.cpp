@@ -192,10 +192,7 @@ namespace tc
     }
 
     VideoEncoderVCE::~VideoEncoderVCE() {
-        if (amf_context_) {
-            amf_context_->Terminate();
-            amf_context_->Release();
-        }
+
     }
 
     amf::AMF_SURFACE_FORMAT DXGI_FORMAT_to_AMF_FORMAT(DXGI_FORMAT format) {
@@ -255,7 +252,7 @@ namespace tc
     }
 
     void VideoEncoderVCE::Exit() {
-
+        this->Shutdown();
     }
 
     void VideoEncoderVCE::Shutdown() {
