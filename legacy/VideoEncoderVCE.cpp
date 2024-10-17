@@ -15,8 +15,8 @@
 
 #define DEBUG_FILE 0
 
-#define AMF_THROW_IF(expr) {AMF_RESULT res = expr;\
-    if(res != AMF_OK){LOGE("ERROR: {}", res); assert(0);}}
+#define AMF_LOG_ERR_IF(expr) {AMF_RESULT res = expr;\
+    if(res != AMF_OK){LOGE("ERROR: {}", res);}}
 
 const wchar_t* START_TIME_PROPERTY = L"StartTimeProperty";
 const wchar_t* FRAME_INDEX_PROPERTY = L"FrameIndexProperty";
@@ -134,11 +134,11 @@ namespace tc
     AMFTextureConverter::AMFTextureConverter(const amf::AMFContextPtr &amfContext, int width, int height,
                                              amf::AMF_SURFACE_FORMAT inputFormat, amf::AMF_SURFACE_FORMAT outputFormat,
                                              AMFTextureReceiver receiver) : receiver_(std::move(receiver)) {
-        AMF_THROW_IF(g_AMFFactory.GetFactory()->CreateComponent(amfContext, AMFVideoConverter, &amf_converter_));
-        AMF_THROW_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, amf::AMF_MEMORY_DX11));
-        AMF_THROW_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, outputFormat));
-        AMF_THROW_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, ::AMFConstructSize(width, height)));
-        AMF_THROW_IF(amf_converter_->Init(inputFormat, width, height));
+        AMF_LOG_ERR_IF(g_AMFFactory.GetFactory()->CreateComponent(amfContext, AMFVideoConverter, &amf_converter_));
+        AMF_LOG_ERR_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, amf::AMF_MEMORY_DX11));
+        AMF_LOG_ERR_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, outputFormat));
+        AMF_LOG_ERR_IF(amf_converter_->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, ::AMFConstructSize(width, height)));
+        AMF_LOG_ERR_IF(amf_converter_->Init(inputFormat, width, height));
         LOGI("Initialized AMFTextureConverter.");
     }
 
@@ -209,9 +209,17 @@ namespace tc
     bool VideoEncoderVCE::Initialize(const tc::EncoderConfig &config) {
         VideoEncoder::Initialize(config);
         codec_type_ = config.codec_type;
-        AMF_THROW_IF(g_AMFFactory.Init());
+        auto ret = g_AMFFactory.Init();
+        AMF_LOG_ERR_IF(ret);
+        if (ret != AMF_OK) {
+            return false;
+        }
         ::amf_increase_timer_precision();
-        AMF_THROW_IF(g_AMFFactory.GetFactory()->CreateContext(&amf_context_));
+        ret = g_AMFFactory.GetFactory()->CreateContext(&amf_context_);
+        AMF_LOG_ERR_IF(ret);
+        if (ret != AMF_OK) {
+            return false;
+        }
         if (amf_context_->InitDX11(d3d11_device_.Get()) != AMF_OK) {
             LOGE("Amf context init dx11 failed.");
             return false;
@@ -327,7 +335,7 @@ namespace tc
     void VideoEncoderVCE::EncodeTexture(ID3D11Texture2D* texture, int width, int height, int64_t frame_idx) {
         amf::AMFSurfacePtr surface = nullptr;
         // Surface is cached by AMF.
-        AMF_THROW_IF(amf_context_->AllocSurface(amf::AMF_MEMORY_DX11, convert_input_format_, width, height, &surface));
+        AMF_LOG_ERR_IF(amf_context_->AllocSurface(amf::AMF_MEMORY_DX11, convert_input_format_, width, height, &surface));
         if (!surface) {
             LOGE("AllocSurface failed!");
             return;
