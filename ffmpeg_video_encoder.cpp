@@ -110,8 +110,11 @@ namespace tc
 
         if (insert_idr_) {
             insert_idr_ = false;
-            // insert idr
-            // todo
+            frame_->key_frame = 1;
+            frame_->pict_type = AV_PICTURE_TYPE_I;
+        } else {
+            frame_->key_frame = 0;
+            frame_->pict_type = AV_PICTURE_TYPE_NONE;
         }
 
         int y_size =  img_width * img_height;
@@ -127,6 +130,7 @@ namespace tc
                 break;
             }
 
+            //LOGI("Packet frame is key: {}", (packet_->flags & AV_PKT_FLAG_KEY));
             auto encoded_data = Data::Make((char*)packet_->data, packet_->size);
             if (encoder_callback_) {
                 auto image = Image::Make(encoded_data, img_width, img_height, 3);
