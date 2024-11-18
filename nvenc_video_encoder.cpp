@@ -5,6 +5,7 @@
 #include "frame_render/FrameRender.h"
 #include "tc_common_new/win32/d3d_debug_helper.h"
 #include "tc_common_new/time_ext.h"
+#include "tc_common_new/thread.h"
 
 namespace tc
 {
@@ -72,6 +73,30 @@ namespace tc
                 return;
             }
             Encode(texture2d_.Get());
+            
+            {
+                CComPtr<IDXGISurface> staging_surface = nullptr;
+                auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
+                if (FAILED(hr)) {
+                    LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
+                    return;
+                }
+                DXGI_MAPPED_RECT mapped_rect{};
+                hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+                if (FAILED(hr)) {
+                    LOGE("TEST COPY !Map(IDXGISurface)");
+                    return;
+                }
+
+                // copy to raw image buffer
+                raw_image_rgba_format_ = desc.Format;
+                EnsureRawImage(mapped_rect.Pitch, desc.Height);
+                CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, desc.Height);
+
+                // to yuv
+                ConvertToYuv();
+            }
+
         }
         //DebugOutDDS(texture2d_.Get(), "1.dds");
     }

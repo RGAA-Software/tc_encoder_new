@@ -36,8 +36,6 @@ TEST(Test_FFmpeg, encoder) {
     };
     auto encoder = VideoEncoderFactory::CreateEncoder(nullptr, EncoderFeature{}, ECreateEncoderPolicy::kAuto, EncoderConfig{});
     ASSERT_TRUE(encoder != nullptr);
-    auto ok = encoder->Init();
-    ASSERT_TRUE(ok);
 
     //
     size_t y_pixel_size = image->width * image->height;

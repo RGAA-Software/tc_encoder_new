@@ -2,12 +2,18 @@
 // Created by RGAA on 2023-12-16.
 //
 
+#include <fstream>
 #include "video_encoder.h"
 #include "tc_common_new/string_ext.h"
 #include "tc_common_new/message_notifier.h"
 #include "tc_encoder_new/encoder_messages.h"
 #include "tc_common_new/log.h"
 #include "frame_render/FrameRender.h"
+#include "tc_common_new/data.h"
+#include "tc_common_new/image.h"
+#include "tc_common_new/thread.h"
+#include "libyuv/convert.h"
+#include "tc_common_new/time_ext.h"
 
 namespace tc
 {
@@ -75,11 +81,12 @@ namespace tc
         out_width_ = config.encode_width;
         out_height_ = config.encode_height;
         refresh_rate_ = config.fps;
-        return true;
-    }
 
-    bool VideoEncoder::Init() {
-        return false;
+        auto thread_name = std::format("thread_hardware_{}_codec_type_{}", (int)config.Hardware, (int)config.codec_type);
+        yuv_converter_thread_ = Thread::Make(thread_name, 1024);
+        yuv_converter_thread_->Poll();
+
+        return true;
     }
 
     void VideoEncoder::InsertIDR() {
@@ -216,6 +223,74 @@ namespace tc
                 this->InsertIDR();
             });
         }
+    }
+
+    void VideoEncoder::EnsureRawImage(int row_pitch_bytes, int height) {
+        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
+        auto size = row_pitch_bytes * height;
+        auto width = row_pitch_bytes / 4;
+        if (raw_image_rgba_ == nullptr || (raw_image_rgba_->GetData() && raw_image_rgba_->GetData()->Size() != size)) {
+            raw_image_rgba_ = Image::Make(Data::Make(nullptr, size), width, height);
+        }
+    }
+
+    void VideoEncoder::CopyToRawImage(const uint8_t* data, int row_pitch_bytes, int height) {
+        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
+        auto total_size = row_pitch_bytes * height;
+        if (total_size > raw_image_rgba_->GetData()->Size()) {
+            LOGE("raw image buffer is too small, you need to resize it!");
+            return;
+        }
+        for (int i = 0; i < height; i++) {
+            auto offset = i * row_pitch_bytes;
+            memcpy(raw_image_rgba_->GetData()->DataAddr() + offset, data + offset, row_pitch_bytes);
+        }
+    }
+
+    void VideoEncoder::ConvertToYuv() {
+        yuv_converter_thread_->Post([=, this]() {
+            std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
+            auto beg = TimeExt::GetCurrentTimestamp();
+            if (!raw_image_rgba_ || !raw_image_rgba_->GetData()) {
+                return;
+            }
+            if (!raw_image_yuv_ ||
+                (raw_image_yuv_->GetWidth() != raw_image_rgba_->GetWidth() || raw_image_yuv_->GetHeight() != raw_image_yuv_->GetHeight())) {
+                raw_image_yuv_ = Image::Make(Data::Make(nullptr, raw_image_rgba_->GetWidth() * raw_image_rgba_->GetHeight() * 1.5),
+                                             raw_image_rgba_->GetWidth(), raw_image_rgba_->GetHeight());
+            }
+            int width = raw_image_rgba_->GetWidth();
+            int height = raw_image_rgba_->GetHeight();
+            std::vector<uint8_t> yuv_frame_data_;
+            yuv_frame_data_.resize(1.5 * width * height);
+            size_t pixel_size = width * height;
+
+            const int uv_stride = width >> 1;
+            uint8_t* y = yuv_frame_data_.data();
+            uint8_t* u = y + pixel_size;
+            uint8_t* v = u + (pixel_size >> 2);
+
+            auto pitch = raw_image_rgba_->GetWidth() * 4;
+            auto data_buffer = (uint8_t*)raw_image_rgba_->GetData()->DataAddr();
+            if (DXGI_FORMAT_B8G8R8A8_UNORM == raw_image_rgba_format_) {
+                libyuv::ARGBToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+            }
+            else if (DXGI_FORMAT_R8G8B8A8_UNORM == raw_image_rgba_format_) {
+                libyuv::ABGRToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+            }
+            else {
+                libyuv::ARGBToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+            }
+
+            // LOGI("Convert to YUV success ,used: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
+            // static int frame_index = 0;
+            // frame_index++;
+            // if (frame_index <= 10) {
+            //     std::ofstream file(std::format("111222_{}.yuv", frame_index).c_str(), std::ios::binary);
+            //     file.write(reinterpret_cast<const char *>(yuv_frame_data_.data()), yuv_frame_data_.size());
+            //     file.close();
+            // }
+        });
     }
 
 }
