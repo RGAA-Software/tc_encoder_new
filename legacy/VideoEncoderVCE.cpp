@@ -5,6 +5,7 @@
 #include "tc_common_new/data.h"
 #include "tc_encoder_new/encoder_config.h"
 #include "tc_common_new/image.h"
+#include "tc_common_new/defer.h"
 #include "D3DTextureDebug.h"
 #include "tc_encoder_new/frame_render/FrameRender.h"
 #include <combaseapi.h>
@@ -260,6 +261,7 @@ namespace tc
     }
 
     void VideoEncoderVCE::Exit() {
+        VideoEncoder::Exit();
         this->Shutdown();
     }
 
@@ -319,6 +321,14 @@ namespace tc
                 LOGE("Resize draw failed");
                 return;
             }
+
+            // plugins: Copy
+            {
+                D3D11_TEXTURE2D_DESC resize_desc;
+                shared_texture->GetDesc(&resize_desc);
+                CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
+            }
+
             auto end = TimeExt::GetCurrentTimestamp();
             auto diff = end - beg;
             EncodeTexture(final_texture, encoder_config_.encode_width, encoder_config_.encode_height, frame_index);
@@ -328,8 +338,39 @@ namespace tc
                 return;
             }
             EncodeTexture(texture2d_.Get(), origin_desc.Width, origin_desc.Height, frame_index);
+
+            // plugins: Copy
+            {
+                CopyRawTexture(texture2d_.Get(), origin_desc.Format, origin_desc.Height);
+            }
         }
 
+    }
+
+    void VideoEncoderVCE::CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height) {
+        CComPtr<IDXGISurface> staging_surface = nullptr;
+        auto hr = texture->QueryInterface(IID_PPV_ARGS(&staging_surface));
+        if (FAILED(hr)) {
+            LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
+            return;
+        }
+        DXGI_MAPPED_RECT mapped_rect{};
+        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+        if (FAILED(hr)) {
+            LOGE("TEST COPY !Map(IDXGISurface)");
+            return;
+        }
+        auto defer = Defer::Make([staging_surface]() {
+            staging_surface->Unmap();
+        });
+
+        // copy to raw image buffer
+        raw_image_rgba_format_ = format;
+        EnsureRawImage(mapped_rect.Pitch, height);
+        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, height);
+
+        // to yuv
+        ConvertToYuv();
     }
 
     void VideoEncoderVCE::EncodeTexture(ID3D11Texture2D* texture, int width, int height, int64_t frame_idx) {

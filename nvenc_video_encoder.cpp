@@ -6,6 +6,7 @@
 #include "tc_common_new/win32/d3d_debug_helper.h"
 #include "tc_common_new/time_ext.h"
 #include "tc_common_new/thread.h"
+#include "tc_common_new/defer.h"
 
 namespace tc
 {
@@ -66,39 +67,54 @@ namespace tc
                 LOGE("Draw failed");
                 return;
             }
+
+            // plugins: Copy
+            {
+                D3D11_TEXTURE2D_DESC resize_desc;
+                final_texture->GetDesc(&resize_desc);
+                CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
+            }
+
             Encode(final_texture);
+
         } else {
             if (!CopyID3D11Texture2D(shared_texture)) {
                 LOGE("CopyID3D11Texture2D failed.");
                 return;
             }
+
+            // plugins: Copy
+            CopyRawTexture(texture2d_.Get(), desc.Format, desc.Height);
+
             Encode(texture2d_.Get());
-            
-            {
-                CComPtr<IDXGISurface> staging_surface = nullptr;
-                auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
-                if (FAILED(hr)) {
-                    LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
-                    return;
-                }
-                DXGI_MAPPED_RECT mapped_rect{};
-                hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
-                if (FAILED(hr)) {
-                    LOGE("TEST COPY !Map(IDXGISurface)");
-                    return;
-                }
-
-                // copy to raw image buffer
-                raw_image_rgba_format_ = desc.Format;
-                EnsureRawImage(mapped_rect.Pitch, desc.Height);
-                CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, desc.Height);
-
-                // to yuv
-                ConvertToYuv();
-            }
-
         }
         //DebugOutDDS(texture2d_.Get(), "1.dds");
+    }
+
+    void NVENCVideoEncoder::CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height) {
+        CComPtr<IDXGISurface> staging_surface = nullptr;
+        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
+        if (FAILED(hr)) {
+            LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
+            return;
+        }
+        DXGI_MAPPED_RECT mapped_rect{};
+        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+        if (FAILED(hr)) {
+            LOGE("TEST COPY !Map(IDXGISurface)");
+            return;
+        }
+        auto defer = Defer::Make([staging_surface]() {
+            staging_surface->Unmap();
+        });
+
+        // copy to raw image buffer
+        raw_image_rgba_format_ = format;
+        EnsureRawImage(mapped_rect.Pitch, height);
+        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, height);
+
+        // to yuv
+        ConvertToYuv();
     }
 
     bool NVENCVideoEncoder::Initialize(const tc::EncoderConfig &config) {
@@ -109,6 +125,7 @@ namespace tc
         try {
             nv_encoder_ = std::make_shared<NvEncoderD3D11>(d3d11_device_.Get(), input_frame_width_, input_frame_height_, format, 0);
         } catch (const NVENCException& e) {
+            nv_encoder_ = nullptr;
             LOGI("NVENC NvEncoderD3D11 failed: {} => {}", e.getErrorCode(), e.what());
             return false;
         }
@@ -133,6 +150,7 @@ namespace tc
     }
 
     void NVENCVideoEncoder::Exit() {
+        VideoEncoder::Exit();
         Shutdown();
     }
 

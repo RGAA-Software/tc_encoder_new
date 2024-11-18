@@ -44,6 +44,6 @@ target_link_libraries(tc_encoder_new)#yuv
 #target_link_directories(tc_encoder_new PRIVATE ${FFMPEG_LIBRARY_DIRS})
 target_link_libraries(tc_encoder_new ${FFMPEG_LIB_PATH}/avcodec.lib ${FFMPEG_LIB_PATH}/avdevice.lib ${FFMPEG_LIB_PATH}/avfilter.lib
         ${FFMPEG_LIB_PATH}/avformat.lib ${FFMPEG_LIB_PATH}/avutil.lib ${FFMPEG_LIB_PATH}/swresample.lib ${FFMPEG_LIB_PATH}/swscale.lib
-        ${FFMPEG_LIB_PATH}/postproc.lib tc_opus_codec_new frame_render)#${FFMPEG_LIBRARIES}
+        ${FFMPEG_LIB_PATH}/postproc.lib tc_opus_codec_new frame_render yuv)#${FFMPEG_LIBRARIES}
 
 add_subdirectory(tests)

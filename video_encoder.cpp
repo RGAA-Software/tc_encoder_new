@@ -12,8 +12,8 @@
 #include "tc_common_new/data.h"
 #include "tc_common_new/image.h"
 #include "tc_common_new/thread.h"
-#include "libyuv/convert.h"
 #include "tc_common_new/time_ext.h"
+#include "libyuv/convert.h"
 
 namespace tc
 {
@@ -110,7 +110,9 @@ namespace tc
     }
 
     void VideoEncoder::Exit() {
-
+        if (yuv_converter_thread_) {
+            yuv_converter_thread_->Exit();
+        }
     }
 
     bool VideoEncoder::D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d) {
@@ -204,7 +206,6 @@ namespace tc
         return true;
     }
 
-
     ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
         ComPtr<ID3D11Texture2D> sharedTexture;
         HRESULT hres;
@@ -241,15 +242,16 @@ namespace tc
             LOGE("raw image buffer is too small, you need to resize it!");
             return;
         }
-        for (int i = 0; i < height; i++) {
-            auto offset = i * row_pitch_bytes;
-            memcpy(raw_image_rgba_->GetData()->DataAddr() + offset, data + offset, row_pitch_bytes);
-        }
+        memcpy(raw_image_rgba_->GetData()->DataAddr(), data, total_size);
+        raw_image_rgba_->raw_img_type_ = (RawImageType)GetRawImageType();
     }
 
     void VideoEncoder::ConvertToYuv() {
-        yuv_converter_thread_->Post([=, this]() {
-            std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
+        auto task = [=, this]() {
+            std::lock(raw_image_rgba_mtx_, raw_image_yuv_mtx_);
+            std::lock_guard<std::mutex> guard1(raw_image_rgba_mtx_, std::adopt_lock );
+            std::lock_guard<std::mutex> guard2(raw_image_yuv_mtx_, std::adopt_lock );
+
             auto beg = TimeExt::GetCurrentTimestamp();
             if (!raw_image_rgba_ || !raw_image_rgba_->GetData()) {
                 return;
@@ -257,16 +259,14 @@ namespace tc
             if (!raw_image_yuv_ ||
                 (raw_image_yuv_->GetWidth() != raw_image_rgba_->GetWidth() || raw_image_yuv_->GetHeight() != raw_image_yuv_->GetHeight())) {
                 raw_image_yuv_ = Image::Make(Data::Make(nullptr, raw_image_rgba_->GetWidth() * raw_image_rgba_->GetHeight() * 1.5),
-                                             raw_image_rgba_->GetWidth(), raw_image_rgba_->GetHeight());
+                                             raw_image_rgba_->GetWidth(), raw_image_rgba_->GetHeight(), RawImageType::kI420);
             }
             int width = raw_image_rgba_->GetWidth();
             int height = raw_image_rgba_->GetHeight();
-            std::vector<uint8_t> yuv_frame_data_;
-            yuv_frame_data_.resize(1.5 * width * height);
             size_t pixel_size = width * height;
 
             const int uv_stride = width >> 1;
-            uint8_t* y = yuv_frame_data_.data();
+            uint8_t* y = (uint8_t*)raw_image_yuv_->GetData()->DataAddr();
             uint8_t* u = y + pixel_size;
             uint8_t* v = u + (pixel_size >> 2);
 
@@ -281,16 +281,36 @@ namespace tc
             else {
                 libyuv::ARGBToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
             }
+        };
+        yuv_converter_thread_->Post(std::move(task));
+    }
 
-            // LOGI("Convert to YUV success ,used: {}ms", (TimeExt::GetCurrentTimestamp() - beg));
-            // static int frame_index = 0;
-            // frame_index++;
-            // if (frame_index <= 10) {
-            //     std::ofstream file(std::format("111222_{}.yuv", frame_index).c_str(), std::ios::binary);
-            //     file.write(reinterpret_cast<const char *>(yuv_frame_data_.data()), yuv_frame_data_.size());
-            //     file.close();
-            // }
-        });
+    void VideoEncoder::VisitRawImageRgba(std::function<void(const std::shared_ptr<Image>&)>&& cbk) {
+        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
+        if (!raw_image_rgba_) {
+            return;
+        }
+        cbk(raw_image_rgba_);
+    }
+
+    void VideoEncoder::VisitRawImageYuv(std::function<void(const std::shared_ptr<Image>&)>&& cbk) {
+        std::lock_guard<std::mutex> guard(raw_image_yuv_mtx_);
+        if (!raw_image_yuv_) {
+            return;
+        }
+        cbk(raw_image_yuv_);
+    }
+
+    int VideoEncoder::GetRawImageType() {
+        if (DXGI_FORMAT_B8G8R8A8_UNORM == raw_image_rgba_format_) {
+            return (int)RawImageType::kBGRA;
+        }
+        else if (DXGI_FORMAT_R8G8B8A8_UNORM == raw_image_rgba_format_) {
+            return (int)RawImageType::kRGBA;
+        }
+        else {
+            return (int)RawImageType::kRGBA;
+        }
     }
 
 }

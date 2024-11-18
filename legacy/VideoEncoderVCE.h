@@ -69,6 +69,7 @@ namespace tc
         void ApplyFrameProperties(const amf::AMFSurfacePtr &surface, bool insertIDR);
         void SkipAUD(char** buffer, int* length);
         void EncodeTexture(ID3D11Texture2D* texture, int width, int height, int64_t frame_idx);
+        void CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height);
 
     private:
         amf::AMF_SURFACE_FORMAT convert_input_format_ = amf::AMF_SURFACE_BGRA;// AMF_SURFACE_RGBA;

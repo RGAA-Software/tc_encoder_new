@@ -23,7 +23,8 @@ namespace tc
             LOGI("Finally, select FFmpeg as encoder.");
             auto encoder = std::make_shared<FFmpegVideoEncoder>(msg_notifier, feature);
             if(!encoder->Initialize(config)) {
-                printf("FFmpegVideoEncoder Initialize error\n");
+                encoder->Exit();
+                LOGE("FFmpegVideoEncoder Initialize error!");
                 return nullptr;
             }
             return encoder;
@@ -32,7 +33,8 @@ namespace tc
         auto fn_create_nvenc = [=]() -> std::shared_ptr<VideoEncoder> {
             auto encoder = std::make_shared<NVENCVideoEncoder>(msg_notifier, feature);
             if(!encoder->Initialize(config)) {
-                printf("NVENCVideoEncoder Initialize error\n");
+                encoder->Exit();
+                LOGE("NVENCVideoEncoder Initialize error!");
                 return nullptr;
             }
             return encoder;
@@ -41,6 +43,8 @@ namespace tc
         auto fn_create_amf = [=]() -> std::shared_ptr<VideoEncoder> {
             auto encoder = std::make_shared<VideoEncoderVCE>(msg_notifier, feature);
             if (!encoder->Initialize(config)) {
+                encoder->Exit();
+                LOGE("AMF encoder Initialize error!");
                 return nullptr;
             }
             return encoder;

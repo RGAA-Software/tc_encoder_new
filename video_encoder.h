@@ -60,9 +60,14 @@ namespace tc
         bool CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture2d);
         ComPtr<ID3D11Texture2D> OpenSharedTexture(HANDLE handle);
 
+        void VisitRawImageRgba(std::function<void(const std::shared_ptr<Image>&)>&& cbk);
+        void VisitRawImageYuv(std::function<void(const std::shared_ptr<Image>&)>&& cbk);
+
+    protected:
         void EnsureRawImage(int row_pitch_bytes, int height);
         void CopyToRawImage(const uint8_t* data, int row_pitch_bytes, int height);
         void ConvertToYuv();
+        int GetRawImageType();
 
     private:
         void ListenMessages();
@@ -90,6 +95,7 @@ namespace tc
         std::mutex raw_image_rgba_mtx_;
         std::shared_ptr<Image> raw_image_rgba_ = nullptr;
         int raw_image_rgba_format_ = -1;
+        std::mutex raw_image_yuv_mtx_;
         std::shared_ptr<Image> raw_image_yuv_ = nullptr;
 
         // async yuv converter

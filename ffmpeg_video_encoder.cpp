@@ -12,6 +12,7 @@
 #include "tc_common_new/win32/d3d_debug_helper.h"
 #include "tc_common_new/file.h"
 #include "tc_common_new/time_ext.h"
+#include "tc_common_new/defer.h"
 
 #include <Winerror.h>
 
@@ -170,6 +171,13 @@ namespace tc
             LOGE("!Map(IDXGISurface) 0x{:x}", (uint32_t)hr);
             return;
         }
+        auto defer = Defer::Make([staging_surface]() {
+            staging_surface->Unmap();
+        });
+
+        // Copy rgba
+        EnsureRawImage(mapped_rect.Pitch, desc.Height);
+        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, desc.Height);
 
         int width = desc.Width;
         int height = desc.Height;
@@ -192,6 +200,12 @@ namespace tc
             libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
         }
         //LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+
+        // Copy YUV
+        {
+            std::lock_guard<std::mutex> guard(raw_image_yuv_mtx_);
+            raw_image_yuv_ = Image::Make(capture_data_, desc.Width, desc.Height, RawImageType::kI420);
+        }
 
         beg = TimeExt::GetCurrentTimestamp();
         auto image = Image::Make(capture_data_, width, height, 3);
