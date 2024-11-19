@@ -70,9 +70,9 @@ namespace tc
 
             // plugins: Copy
             {
-                D3D11_TEXTURE2D_DESC resize_desc;
-                final_texture->GetDesc(&resize_desc);
-                CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
+                //D3D11_TEXTURE2D_DESC resize_desc;
+                //final_texture->GetDesc(&resize_desc);
+                //CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
             }
 
             Encode(final_texture);
@@ -84,7 +84,7 @@ namespace tc
             }
 
             // plugins: Copy
-            CopyRawTexture(texture2d_.Get(), desc.Format, desc.Height);
+            //CopyRawTexture(texture2d_.Get(), desc.Format, desc.Height);
 
             Encode(texture2d_.Get());
         }
