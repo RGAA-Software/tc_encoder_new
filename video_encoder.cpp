@@ -81,11 +81,6 @@ namespace tc
         out_width_ = config.encode_width;
         out_height_ = config.encode_height;
         refresh_rate_ = config.fps;
-
-        auto thread_name = std::format("thread_hardware_{}_codec_type_{}", (int)config.Hardware, (int)config.codec_type);
-        yuv_converter_thread_ = Thread::Make(thread_name, 1024);
-        yuv_converter_thread_->Poll();
-
         return true;
     }
 
@@ -97,219 +92,123 @@ namespace tc
         this->encoder_callback_ = std::move(cbk);
     }
 
-    void VideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
-
-    }
-
-    void VideoEncoder::Encode(ID3D11Texture2D *tex2d) {
-
+    void VideoEncoder::Encode(ID3D11Texture2D *tex2d, uint64_t frame_index) {
     }
 
     void VideoEncoder::Encode(const std::shared_ptr<Image> &i420_data, uint64_t frame_index) {
-
     }
 
     void VideoEncoder::Exit() {
-        if (yuv_converter_thread_) {
-            yuv_converter_thread_->Exit();
-        }
     }
 
-    bool VideoEncoder::D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d) {
-        HRESULT hres;
-        ComPtr<IDXGIKeyedMutex> key_mutex;
-        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
-        if (FAILED(hres)) {
-            printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
-            return false;
-        }
-        hres = key_mutex->AcquireSync(0, INFINITE);
-        if (FAILED(hres)) {
-            printf("D3D11Texture2DReleaseMutex AcquireSync failed.\n");
-            return false;
-        }
-        return true;
-    }
-
-    bool VideoEncoder::D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d) {
-        HRESULT hres;
-        ComPtr<IDXGIKeyedMutex> key_mutex;
-        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
-        if (FAILED(hres)) {
-            printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
-            return false;
-        }
-        hres = key_mutex->ReleaseSync(0);
-        if (FAILED(hres)) {
-            printf("D3D11Texture2DReleaseMutex ReleaseSync failed.\n");
-            return false;
-        }
-        return true;
-    }
-
-    bool VideoEncoder::CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture) {
-        if (!D3D11Texture2DLockMutex(shared_texture)) {
-            LOGE("D3D11Texture2DLockMutex error");
-            return false;
-        }
-        std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
-            D3D11Texture2DReleaseMutex(shared_texture);
-        });
-
-        HRESULT hres;
-        D3D11_TEXTURE2D_DESC desc;
-        shared_texture->GetDesc(&desc);
-
-        ComPtr<ID3D11Device> curDevice;
-        shared_texture->GetDevice(&curDevice);
-
-        if (texture2d_) {
-            ComPtr<ID3D11Device> sharedTextureDevice;
-            texture2d_->GetDevice(&sharedTextureDevice);
-            if (sharedTextureDevice != curDevice) {
-                texture2d_ = nullptr;
-            }
-            if (texture2d_) {
-                D3D11_TEXTURE2D_DESC sharedTextureDesc;
-                texture2d_->GetDesc(&sharedTextureDesc);
-                if (desc.Width != sharedTextureDesc.Width ||
-                    desc.Height != sharedTextureDesc.Height ||
-                    desc.Format != sharedTextureDesc.Format) {
-                    texture2d_ = nullptr;
-                }
-            }
-        }
-
-        if (!texture2d_) {
-            D3D11_TEXTURE2D_DESC createDesc;
-            ZeroMemory(&createDesc, sizeof(createDesc));
-            createDesc.Format = desc.Format;
-            createDesc.Width = desc.Width;
-            createDesc.Height = desc.Height;
-            createDesc.MipLevels = 1;
-            createDesc.ArraySize = 1;
-            createDesc.SampleDesc.Count = 1;
-            //createDesc.Usage = D3D11_USAGE_DEFAULT;
-            //createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            createDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            createDesc.Usage = D3D11_USAGE_STAGING;
-            hres = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf());
-            if (FAILED(hres)) {
-                LOGE("desktop capture create texture failed with:{}", StringExt::GetErrorStr(hres).c_str());
-                return false;
-            }
-        }
-        ComPtr<ID3D11DeviceContext> ctx;
-        curDevice->GetImmediateContext(&ctx);
-        ctx->CopyResource(texture2d_.Get(), shared_texture.Get());
-
-        return true;
-    }
-
-    ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
-        ComPtr<ID3D11Texture2D> sharedTexture;
-        HRESULT hres;
-        hres = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf()));
-        if (FAILED(hres)) {
-            LOGE("OpenSharedResource failed: {}", hres);
-            return nullptr;
-        }
-        return sharedTexture;
-    }
+//    bool VideoEncoder::D3D11Texture2DLockMutex(ComPtr<ID3D11Texture2D> texture2d) {
+//        HRESULT hres;
+//        ComPtr<IDXGIKeyedMutex> key_mutex;
+//        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
+//        if (FAILED(hres)) {
+//            printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
+//            return false;
+//        }
+//        hres = key_mutex->AcquireSync(0, INFINITE);
+//        if (FAILED(hres)) {
+//            printf("D3D11Texture2DReleaseMutex AcquireSync failed.\n");
+//            return false;
+//        }
+//        return true;
+//    }
+//
+//    bool VideoEncoder::D3D11Texture2DReleaseMutex(ComPtr<ID3D11Texture2D> texture2d) {
+//        HRESULT hres;
+//        ComPtr<IDXGIKeyedMutex> key_mutex;
+//        hres = texture2d.As<IDXGIKeyedMutex>(&key_mutex);
+//        if (FAILED(hres)) {
+//            printf("D3D11Texture2DReleaseMutex IDXGIKeyedMutex. error\n");
+//            return false;
+//        }
+//        hres = key_mutex->ReleaseSync(0);
+//        if (FAILED(hres)) {
+//            printf("D3D11Texture2DReleaseMutex ReleaseSync failed.\n");
+//            return false;
+//        }
+//        return true;
+//    }
+//
+//    bool VideoEncoder::CopyID3D11Texture2D(ComPtr<ID3D11Texture2D> shared_texture) {
+//        if (!D3D11Texture2DLockMutex(shared_texture)) {
+//            LOGE("D3D11Texture2DLockMutex error");
+//            return false;
+//        }
+//        std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
+//            D3D11Texture2DReleaseMutex(shared_texture);
+//        });
+//
+//        HRESULT hres;
+//        D3D11_TEXTURE2D_DESC desc;
+//        shared_texture->GetDesc(&desc);
+//
+//        ComPtr<ID3D11Device> curDevice;
+//        shared_texture->GetDevice(&curDevice);
+//
+//        if (texture2d_) {
+//            ComPtr<ID3D11Device> sharedTextureDevice;
+//            texture2d_->GetDevice(&sharedTextureDevice);
+//            if (sharedTextureDevice != curDevice) {
+//                texture2d_ = nullptr;
+//            }
+//            if (texture2d_) {
+//                D3D11_TEXTURE2D_DESC sharedTextureDesc;
+//                texture2d_->GetDesc(&sharedTextureDesc);
+//                if (desc.Width != sharedTextureDesc.Width ||
+//                    desc.Height != sharedTextureDesc.Height ||
+//                    desc.Format != sharedTextureDesc.Format) {
+//                    texture2d_ = nullptr;
+//                }
+//            }
+//        }
+//
+//        if (!texture2d_) {
+//            D3D11_TEXTURE2D_DESC createDesc;
+//            ZeroMemory(&createDesc, sizeof(createDesc));
+//            createDesc.Format = desc.Format;
+//            createDesc.Width = desc.Width;
+//            createDesc.Height = desc.Height;
+//            createDesc.MipLevels = 1;
+//            createDesc.ArraySize = 1;
+//            createDesc.SampleDesc.Count = 1;
+//            //createDesc.Usage = D3D11_USAGE_DEFAULT;
+//            //createDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+//            createDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+//            createDesc.Usage = D3D11_USAGE_STAGING;
+//            hres = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf());
+//            if (FAILED(hres)) {
+//                LOGE("desktop capture create texture failed with:{}", StringExt::GetErrorStr(hres).c_str());
+//                return false;
+//            }
+//        }
+//        ComPtr<ID3D11DeviceContext> ctx;
+//        curDevice->GetImmediateContext(&ctx);
+//        ctx->CopyResource(texture2d_.Get(), shared_texture.Get());
+//
+//        return true;
+//    }
+//
+//    ComPtr<ID3D11Texture2D> VideoEncoder::OpenSharedTexture(HANDLE handle) {
+//        ComPtr<ID3D11Texture2D> sharedTexture;
+//        HRESULT hres;
+//        hres = d3d11_device_->OpenSharedResource(handle, IID_PPV_ARGS(sharedTexture.GetAddressOf()));
+//        if (FAILED(hres)) {
+//            LOGE("OpenSharedResource failed: {}", hres);
+//            return nullptr;
+//        }
+//        return sharedTexture;
+//    }
 
     void VideoEncoder::ListenMessages() {
         if (msg_notifier_) {
             msg_listener_ = msg_notifier_->CreateListener();
-            msg_listener_->Listen<MsgInsertIDR>([=, this](const auto &msg) {
+            msg_listener_->Listen<MsgInsertIDR>([=](const auto &msg) {
                 this->InsertIDR();
             });
-        }
-    }
-
-    void VideoEncoder::EnsureRawImage(int row_pitch_bytes, int height) {
-        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
-        auto size = row_pitch_bytes * height;
-        auto width = row_pitch_bytes / 4;
-        if (raw_image_rgba_ == nullptr || (raw_image_rgba_->GetData() && raw_image_rgba_->GetData()->Size() != size)) {
-            raw_image_rgba_ = Image::Make(Data::Make(nullptr, size), width, height);
-        }
-    }
-
-    void VideoEncoder::CopyToRawImage(const uint8_t* data, int row_pitch_bytes, int height) {
-        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
-        auto total_size = row_pitch_bytes * height;
-        if (total_size > raw_image_rgba_->GetData()->Size()) {
-            LOGE("raw image buffer is too small, you need to resize it!");
-            return;
-        }
-        memcpy(raw_image_rgba_->GetData()->DataAddr(), data, total_size);
-        raw_image_rgba_->raw_img_type_ = (RawImageType)GetRawImageType();
-    }
-
-    void VideoEncoder::ConvertToYuv() {
-        auto task = [=, this]() {
-            std::lock(raw_image_rgba_mtx_, raw_image_yuv_mtx_);
-            std::lock_guard<std::mutex> guard1(raw_image_rgba_mtx_, std::adopt_lock );
-            std::lock_guard<std::mutex> guard2(raw_image_yuv_mtx_, std::adopt_lock );
-
-            auto beg = TimeExt::GetCurrentTimestamp();
-            if (!raw_image_rgba_ || !raw_image_rgba_->GetData()) {
-                return;
-            }
-            if (!raw_image_yuv_ ||
-                (raw_image_yuv_->GetWidth() != raw_image_rgba_->GetWidth() || raw_image_yuv_->GetHeight() != raw_image_yuv_->GetHeight())) {
-                raw_image_yuv_ = Image::Make(Data::Make(nullptr, raw_image_rgba_->GetWidth() * raw_image_rgba_->GetHeight() * 1.5),
-                                             raw_image_rgba_->GetWidth(), raw_image_rgba_->GetHeight(), RawImageType::kI420);
-            }
-            int width = raw_image_rgba_->GetWidth();
-            int height = raw_image_rgba_->GetHeight();
-            size_t pixel_size = width * height;
-
-            const int uv_stride = width >> 1;
-            uint8_t* y = (uint8_t*)raw_image_yuv_->GetData()->DataAddr();
-            uint8_t* u = y + pixel_size;
-            uint8_t* v = u + (pixel_size >> 2);
-
-            auto pitch = raw_image_rgba_->GetWidth() * 4;
-            auto data_buffer = (uint8_t*)raw_image_rgba_->GetData()->DataAddr();
-            if (DXGI_FORMAT_B8G8R8A8_UNORM == raw_image_rgba_format_) {
-                libyuv::ARGBToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-            }
-            else if (DXGI_FORMAT_R8G8B8A8_UNORM == raw_image_rgba_format_) {
-                libyuv::ABGRToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-            }
-            else {
-                libyuv::ARGBToI420(data_buffer, pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-            }
-        };
-        yuv_converter_thread_->Post(std::move(task));
-    }
-
-    void VideoEncoder::VisitRawImageRgba(std::function<void(const std::shared_ptr<Image>&)>&& cbk) {
-        std::lock_guard<std::mutex> guard(raw_image_rgba_mtx_);
-        if (!raw_image_rgba_) {
-            return;
-        }
-        cbk(raw_image_rgba_);
-    }
-
-    void VideoEncoder::VisitRawImageYuv(std::function<void(const std::shared_ptr<Image>&)>&& cbk) {
-        std::lock_guard<std::mutex> guard(raw_image_yuv_mtx_);
-        if (!raw_image_yuv_) {
-            return;
-        }
-        cbk(raw_image_yuv_);
-    }
-
-    int VideoEncoder::GetRawImageType() {
-        if (DXGI_FORMAT_B8G8R8A8_UNORM == raw_image_rgba_format_) {
-            return (int)RawImageType::kBGRA;
-        }
-        else if (DXGI_FORMAT_R8G8B8A8_UNORM == raw_image_rgba_format_) {
-            return (int)RawImageType::kRGBA;
-        }
-        else {
-            return (int)RawImageType::kRGBA;
         }
     }
 

@@ -142,76 +142,76 @@ namespace tc
         }
     }
 
-    void FFmpegVideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
-        auto beg = TimeExt::GetCurrentTimestamp();
-        ComPtr<ID3D11Texture2D> shared_texture;
-        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(handle));
-        if (!shared_texture) {
-            LOGE("OpenSharedTexture failed.");
-            return;
-        }
-        D3D11_TEXTURE2D_DESC desc;
-        shared_texture->GetDesc(&desc);
-
-        if (!CopyID3D11Texture2D(shared_texture)) {
-            LOGE("Copy texture failed!");
-            return;
-        }
-
-        CComPtr<IDXGISurface> staging_surface = nullptr;
-        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
-        if (FAILED(hr)) {
-            LOGE("!QueryInterface(IDXGISurface) err");
-            return;
-        }
-        // E_OUTOFMEMORY
-        DXGI_MAPPED_RECT mapped_rect{};
-        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
-        if (FAILED(hr)) {
-            LOGE("!Map(IDXGISurface) 0x{:x}", (uint32_t)hr);
-            return;
-        }
-        auto defer = Defer::Make([staging_surface]() {
-            staging_surface->Unmap();
-        });
-
-        // Copy rgba
-        EnsureRawImage(mapped_rect.Pitch, desc.Height);
-        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, desc.Height);
-
-        int width = desc.Width;
-        int height = desc.Height;
-        int target_data_size = 1.5 * width * height;
-        if (!capture_data_ || capture_data_->Size() != target_data_size) {
-            capture_data_ = Data::Make(nullptr, target_data_size);
-        }
-        size_t pixel_size = width * height;
-
-        const int uv_stride = width >> 1;
-        auto y = (uint8_t*)capture_data_->DataAddr();
-        auto u = y + pixel_size;
-        auto v = u + (pixel_size >> 2);
-
-        if (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format) {
-            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-        } else if (DXGI_FORMAT_R8G8B8A8_UNORM == desc.Format) {
-            libyuv::ABGRToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-        } else {
-            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
-        }
-        //LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
-
-        // Copy YUV
-        {
-            std::lock_guard<std::mutex> guard(raw_image_yuv_mtx_);
-            raw_image_yuv_ = Image::Make(capture_data_, desc.Width, desc.Height, RawImageType::kI420);
-        }
-
-        beg = TimeExt::GetCurrentTimestamp();
-        auto image = Image::Make(capture_data_, width, height, 3);
-        this->Encode(image, frame_index);
-        //LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
-    }
+//    void FFmpegVideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
+//        auto beg = TimeExt::GetCurrentTimestamp();
+//        ComPtr<ID3D11Texture2D> shared_texture;
+//        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(handle));
+//        if (!shared_texture) {
+//            LOGE("OpenSharedTexture failed.");
+//            return;
+//        }
+//        D3D11_TEXTURE2D_DESC desc;
+//        shared_texture->GetDesc(&desc);
+//
+//        if (!CopyID3D11Texture2D(shared_texture)) {
+//            LOGE("Copy texture failed!");
+//            return;
+//        }
+//
+//        CComPtr<IDXGISurface> staging_surface = nullptr;
+//        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
+//        if (FAILED(hr)) {
+//            LOGE("!QueryInterface(IDXGISurface) err");
+//            return;
+//        }
+//        // E_OUTOFMEMORY
+//        DXGI_MAPPED_RECT mapped_rect{};
+//        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+//        if (FAILED(hr)) {
+//            LOGE("!Map(IDXGISurface) 0x{:x}", (uint32_t)hr);
+//            return;
+//        }
+//        auto defer = Defer::Make([staging_surface]() {
+//            staging_surface->Unmap();
+//        });
+//
+//        // Copy rgba
+//        EnsureRawImage(mapped_rect.Pitch, desc.Height);
+//        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, desc.Height);
+//
+//        int width = desc.Width;
+//        int height = desc.Height;
+//        int target_data_size = 1.5 * width * height;
+//        if (!capture_data_ || capture_data_->Size() != target_data_size) {
+//            capture_data_ = Data::Make(nullptr, target_data_size);
+//        }
+//        size_t pixel_size = width * height;
+//
+//        const int uv_stride = width >> 1;
+//        auto y = (uint8_t*)capture_data_->DataAddr();
+//        auto u = y + pixel_size;
+//        auto v = u + (pixel_size >> 2);
+//
+//        if (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format) {
+//            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+//        } else if (DXGI_FORMAT_R8G8B8A8_UNORM == desc.Format) {
+//            libyuv::ABGRToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+//        } else {
+//            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
+//        }
+//        //LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+//
+//        // Copy YUV
+//        {
+//            std::lock_guard<std::mutex> guard(raw_image_yuv_mtx_);
+//            raw_image_yuv_ = Image::Make(capture_data_, desc.Width, desc.Height, RawImageType::kI420);
+//        }
+//
+//        beg = TimeExt::GetCurrentTimestamp();
+//        auto image = Image::Make(capture_data_, width, height, 3);
+//        this->Encode(image, frame_index);
+//        //LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+//    }
 
     void FFmpegVideoEncoder::Exit() {
         VideoEncoder::Exit();

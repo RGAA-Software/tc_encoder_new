@@ -18,104 +18,104 @@ namespace tc
 
     NVENCVideoEncoder::~NVENCVideoEncoder() = default;
 
-    void NVENCVideoEncoder::Encode(ID3D11Texture2D *tex) {
+    void NVENCVideoEncoder::Encode(ID3D11Texture2D *tex, uint64_t frame_index) {
         static int intdex = 0;
         Transmit(tex, intdex % 60 == 0);
         ++intdex;
     }
 
-    void NVENCVideoEncoder::Encode(uint64_t shared_handle, uint64_t frame_index) {
-        ComPtr<ID3D11Texture2D> shared_texture;
-        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(shared_handle));
-        if (!shared_texture) {
-            LOGE("OpenSharedTexture failed.");
-            return;
-        }
+//    void NVENCVideoEncoder::Encode(uint64_t shared_handle, uint64_t frame_index) {
+//        ComPtr<ID3D11Texture2D> shared_texture;
+//        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(shared_handle));
+//        if (!shared_texture) {
+//            LOGE("OpenSharedTexture failed.");
+//            return;
+//        }
+//
+//        //DebugOutDDS(shared_texture.Get(), "1.dds");
+//
+//        D3D11_TEXTURE2D_DESC desc;
+//        shared_texture->GetDesc(&desc);
+//        if (encoder_config_.frame_resize) {
+//            auto beg = TimeExt::GetCurrentTimestamp();
+//            if (!frame_render_ && d3d11_device_ && d3d11_device_context_) {
+//                frame_render_ = FrameRender::Make(d3d11_device_.Get(), d3d11_device_context_.Get());
+//                SIZE target_size = {encoder_config_.encode_width, encoder_config_.encode_height};
+//                frame_render_->Prepare(target_size, {(long) desc.Width, (long) desc.Height}, desc.Format);
+//            }
+//
+//            auto resize_ctx = frame_render_->GetD3D11DeviceContext();
+//
+//            {
+//                if (!D3D11Texture2DLockMutex(shared_texture)) {
+//                    LOGE("D3D11Texture2DLockMutex error\n");
+//                    return;
+//                }
+//                std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
+//                    D3D11Texture2DReleaseMutex(shared_texture);
+//                });
+//                auto pre_texture = frame_render_->GetSrcTexture();
+//                ID3D11Device* dev;
+//                shared_texture->GetDevice(&dev);
+//                resize_ctx->CopyResource(pre_texture, shared_texture.Get());
+//                //DebugOutDDS(pre_texture, "2.dds");
+//            }
+//            frame_render_->Draw();
+//            auto final_texture = frame_render_->GetFinalTexture();
+//            //DebugOutDDS(final_texture, "3.dds");
+//            if (!final_texture) {
+//                LOGE("Draw failed");
+//                return;
+//            }
+//
+//            // plugins: Copy
+//            {
+//                //D3D11_TEXTURE2D_DESC resize_desc;
+//                //final_texture->GetDesc(&resize_desc);
+//                //CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
+//            }
+//
+//            Encode(final_texture);
+//
+//        } else {
+//            if (!CopyID3D11Texture2D(shared_texture)) {
+//                LOGE("CopyID3D11Texture2D failed.");
+//                return;
+//            }
+//
+//            // plugins: Copy
+//            //CopyRawTexture(texture2d_.Get(), desc.Format, desc.Height);
+//
+//            Encode(texture2d_.Get());
+//        }
+//        //DebugOutDDS(texture2d_.Get(), "1.dds");
+//    }
 
-        //DebugOutDDS(shared_texture.Get(), "1.dds");
-
-        D3D11_TEXTURE2D_DESC desc;
-        shared_texture->GetDesc(&desc);
-        if (encoder_config_.frame_resize) {
-            auto beg = TimeExt::GetCurrentTimestamp();
-            if (!frame_render_ && d3d11_device_ && d3d11_device_context_) {
-                frame_render_ = FrameRender::Make(d3d11_device_.Get(), d3d11_device_context_.Get());
-                SIZE target_size = {encoder_config_.encode_width, encoder_config_.encode_height};
-                frame_render_->Prepare(target_size, {(long) desc.Width, (long) desc.Height}, desc.Format);
-            }
-
-            auto resize_ctx = frame_render_->GetD3D11DeviceContext();
-
-            {
-                if (!D3D11Texture2DLockMutex(shared_texture)) {
-                    LOGE("D3D11Texture2DLockMutex error\n");
-                    return;
-                }
-                std::shared_ptr<void> auto_release_texture2D_mutex((void *) nullptr, [=, this](void *temp) {
-                    D3D11Texture2DReleaseMutex(shared_texture);
-                });
-                auto pre_texture = frame_render_->GetSrcTexture();
-                ID3D11Device* dev;
-                shared_texture->GetDevice(&dev);
-                resize_ctx->CopyResource(pre_texture, shared_texture.Get());
-                //DebugOutDDS(pre_texture, "2.dds");
-            }
-            frame_render_->Draw();
-            auto final_texture = frame_render_->GetFinalTexture();
-            //DebugOutDDS(final_texture, "3.dds");
-            if (!final_texture) {
-                LOGE("Draw failed");
-                return;
-            }
-
-            // plugins: Copy
-            {
-                //D3D11_TEXTURE2D_DESC resize_desc;
-                //final_texture->GetDesc(&resize_desc);
-                //CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
-            }
-
-            Encode(final_texture);
-
-        } else {
-            if (!CopyID3D11Texture2D(shared_texture)) {
-                LOGE("CopyID3D11Texture2D failed.");
-                return;
-            }
-
-            // plugins: Copy
-            //CopyRawTexture(texture2d_.Get(), desc.Format, desc.Height);
-
-            Encode(texture2d_.Get());
-        }
-        //DebugOutDDS(texture2d_.Get(), "1.dds");
-    }
-
-    void NVENCVideoEncoder::CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height) {
-        CComPtr<IDXGISurface> staging_surface = nullptr;
-        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
-        if (FAILED(hr)) {
-            LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
-            return;
-        }
-        DXGI_MAPPED_RECT mapped_rect{};
-        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
-        if (FAILED(hr)) {
-            LOGE("TEST COPY !Map(IDXGISurface)");
-            return;
-        }
-        auto defer = Defer::Make([staging_surface]() {
-            staging_surface->Unmap();
-        });
-
-        // copy to raw image buffer
-        raw_image_rgba_format_ = format;
-        EnsureRawImage(mapped_rect.Pitch, height);
-        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, height);
-
-        // to yuv
-        ConvertToYuv();
-    }
+//    void NVENCVideoEncoder::CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height) {
+//        CComPtr<IDXGISurface> staging_surface = nullptr;
+//        auto hr = texture2d_->QueryInterface(IID_PPV_ARGS(&staging_surface));
+//        if (FAILED(hr)) {
+//            LOGE("TEST COPY !QueryInterface(IDXGISurface) err");
+//            return;
+//        }
+//        DXGI_MAPPED_RECT mapped_rect{};
+//        hr = staging_surface->Map(&mapped_rect, DXGI_MAP_READ);
+//        if (FAILED(hr)) {
+//            LOGE("TEST COPY !Map(IDXGISurface)");
+//            return;
+//        }
+//        auto defer = Defer::Make([staging_surface]() {
+//            staging_surface->Unmap();
+//        });
+//
+//        // copy to raw image buffer
+//        raw_image_rgba_format_ = format;
+//        EnsureRawImage(mapped_rect.Pitch, height);
+//        CopyToRawImage(mapped_rect.pBits, mapped_rect.Pitch, height);
+//
+//        // to yuv
+//        ConvertToYuv();
+//    }
 
     bool NVENCVideoEncoder::Initialize(const tc::EncoderConfig &config) {
         VideoEncoder::Initialize(config);

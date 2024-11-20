@@ -18,12 +18,12 @@ namespace tc
         ~NVENCVideoEncoder() override;
 
         bool Initialize(const tc::EncoderConfig& config) override;
-        void Encode(uint64_t handle, uint64_t frame_index) override;
-        void Encode(ID3D11Texture2D* tex2d) override;
+        //void Encode(uint64_t handle, uint64_t frame_index) override;
+        void Encode(ID3D11Texture2D* tex2d, uint64_t frame_index) override;
         void Exit() override;
 
     private:
-        void CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height);
+        //void CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height);
 
     private:
         void Transmit(ID3D11Texture2D* pTexture, bool idr);

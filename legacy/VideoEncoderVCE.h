@@ -57,8 +57,8 @@ namespace tc
         ~VideoEncoderVCE() override;
 
         bool Initialize(const tc::EncoderConfig &config) override;
-        void Encode(uint64_t handle, uint64_t frame_index) override;
-        void Encode(ID3D11Texture2D *tex2d) override;
+        //void Encode(uint64_t handle, uint64_t frame_index) override;
+        void Encode(ID3D11Texture2D *tex2d, uint64_t frame_index) override;
         void Encode(const std::shared_ptr<Image> &i420_data, uint64_t frame_index) override;
         void Exit() override;
         void Shutdown();
