@@ -253,7 +253,9 @@ namespace tc
     }
 
     void VideoEncoderVCE::Encode(ID3D11Texture2D *tex2d) {
-
+        D3D11_TEXTURE2D_DESC desc;
+        tex2d->GetDesc(&desc);
+        EncodeTexture(tex2d, desc.Width, desc.Height, 0);
     }
 
     void VideoEncoderVCE::Encode(const std::shared_ptr<Image> &i420_data, uint64_t frame_index) {
