@@ -87,5 +87,7 @@ namespace tc
         // Target CQ (Constant Quality) level for VBR mode (range 0-51 with 0-automatic)
         // targetQuality 值越大编码质量越好
         int target_quality = -1;
+
+        int64_t adapter_uid_ = -1;
     };
 }
