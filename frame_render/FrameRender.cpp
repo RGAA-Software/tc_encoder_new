@@ -61,9 +61,9 @@ namespace tc
 		desc.ArraySize = 1;
 		desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_STAGING;
-		desc.BindFlags = 0;
+		//desc.BindFlags = 0;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-		desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+		//desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
         hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_FinalTexture);
 
         targetDesc.Width = originSize.cx;

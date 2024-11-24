@@ -2,7 +2,10 @@
 #include <winnt.h>
 #include <locale>
 #include <comdef.h>
+#include "tc_common_new/log.h"
+#include "tc_common_new/string_ext.h"
 
+//wprintf(L"RETURN_ON_BAD_HR: hr=0x%08x, error is %ls\n", _hr_, err.ErrorMessage());
 
 #define RETURN_ON_BAD_HR(expr) \
 { \
@@ -10,7 +13,7 @@
     if (FAILED(_hr_)) { \
     {\
         _com_error err(_hr_);\
-        wprintf(L"RETURN_ON_BAD_HR: hr=0x%08x, error is %ls\n", _hr_, err.ErrorMessage());\
+        LOGE("HRESULT: {:x}, msg: {}", (uint32_t)_hr_, tc::StringExt::ToUTF8(err.ErrorMessage())); \
     }\
         return _hr_; \
     } \
