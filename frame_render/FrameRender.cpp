@@ -54,6 +54,7 @@ namespace tc
         RETURN_ON_BAD_HR(hr);
 
 		D3D11_TEXTURE2D_DESC desc = {};
+        ZeroMemory(&desc, sizeof(desc));
 		desc.Width = targetDesc.Width;
 		desc.Height = targetDesc.Height;
 		desc.Format = targetDesc.Format;
@@ -61,14 +62,20 @@ namespace tc
 		desc.ArraySize = 1;
 		desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_STAGING;
-		//desc.BindFlags = 0;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-		//desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-        hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_FinalTexture);
+        hr = m_Device->CreateTexture2D(&desc, nullptr, &m_FinalTexture);
+        if (hr != S_OK) {
+            LOGE("Create final texture failed: {:x}", (uint32_t)hr);
+            return hr;
+        }
 
         targetDesc.Width = originSize.cx;
         targetDesc.Height = originSize.cy;
 		hr = m_Device->CreateTexture2D(&targetDesc, nullptr, &m_SrcTexture);
+        if (hr != S_OK) {
+            LOGE("Create src texture failed: {:x}", (uint32_t)hr);
+            return hr;
+        }
 
 		D3D11_TEXTURE2D_DESC srcDesc = { };
         m_SrcTexture->GetDesc(&srcDesc);
@@ -78,6 +85,10 @@ namespace tc
 		SRVDesc.Texture2D.MostDetailedMip = 0;
 		SRVDesc.Texture2D.MipLevels = 1;
         hr = m_Device->CreateShaderResourceView(m_SrcTexture, &SRVDesc, &m_SrcSrv);
+        if (hr != S_OK) {
+            LOGE("Create shader texture failed: {:x}", (uint32_t)hr);
+            return hr;
+        }
 
         // Make new render target view
         hr = MakeRTV();
