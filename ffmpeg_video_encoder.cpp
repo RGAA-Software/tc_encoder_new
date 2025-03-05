@@ -55,7 +55,7 @@ namespace tc
         //context_->bit_rate = 10000000; // 10Mbps
 
         if(-1 == encoder_config.gop_size) {
-            context_->gop_size = 180;
+            //context_->gop_size = 180;
         }
         context_->bit_rate = encoder_config.bitrate;
 

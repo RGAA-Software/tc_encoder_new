@@ -26,7 +26,7 @@ namespace tc
         //void CopyRawTexture(ID3D11Texture2D* texture, DXGI_FORMAT format, int height);
 
     private:
-        void Transmit(ID3D11Texture2D* pTexture, bool idr);
+        void Transmit(ID3D11Texture2D* pTexture);
         void Shutdown();
         void FillEncodeConfig(NV_ENC_INITIALIZE_PARAMS& initialize_params, int refreshRate, int renderWidth, int renderHeight, uint64_t bitrate_bps);
         static NV_ENC_BUFFER_FORMAT DxgiFormatToNvEncFormat(DXGI_FORMAT dxgiFormat);

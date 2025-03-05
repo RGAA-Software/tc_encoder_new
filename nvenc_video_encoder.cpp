@@ -19,9 +19,7 @@ namespace tc
     NVENCVideoEncoder::~NVENCVideoEncoder() = default;
 
     void NVENCVideoEncoder::Encode(ID3D11Texture2D *tex, uint64_t frame_index) {
-        static int intdex = 0;
-        Transmit(tex, intdex % 60 == 0);
-        ++intdex;
+        Transmit(tex);
     }
 
 //    void NVENCVideoEncoder::Encode(uint64_t shared_handle, uint64_t frame_index) {
@@ -165,7 +163,7 @@ namespace tc
         }
     }
 
-    void NVENCVideoEncoder::Transmit(ID3D11Texture2D *pTexture, bool idr) {
+    void NVENCVideoEncoder::Transmit(ID3D11Texture2D *pTexture) {
         std::vector<std::vector<uint8_t>> out_packet;
         const NvEncInputFrame *input_frame = nv_encoder_->GetNextInputFrame();
         auto pInputTexture = reinterpret_cast<ID3D11Texture2D *>(input_frame->inputPtr);
