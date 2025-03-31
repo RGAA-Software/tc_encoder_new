@@ -4,7 +4,7 @@
 #include <memory>
 #include "shared/d3drender.h" 
 #include "EncodeDataCallback.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "tc_encoder_new/encoder_config.h"
 
 typedef std::function<void(bool)> OnInitEncoderCallback;
@@ -48,6 +48,6 @@ protected:
 	OnInitEncoderCallback init_callback;
 
 	int fps = 0;
-	uint64_t last_update_time = TimeExt::GetCurrentTimestamp();
+	uint64_t last_update_time = TimeUtil::GetCurrentTimestamp();
     EVideoCodecType codec_type_;
 };

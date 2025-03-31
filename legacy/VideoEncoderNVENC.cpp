@@ -9,7 +9,7 @@
 #include <Windows.h>
 #include <format>
 #include "tc_common_new/log.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "tc_common_new/data.h"
 #include "tc_common_new/win32/d3d_debug_helper.h"
 #include "D3DTextureDebug.h"
@@ -299,7 +299,7 @@ void VideoEncoderNVENC::EncodeTextureHandle(uint64_t handle, uint64_t frame_inde
 		//	fpOut.write(reinterpret_cast<char*>(packet.data()), packet.size());
 		//}
 		if (m_Listener) {
-			auto timestamp = TimeExt::GetCurrentTimestamp();
+			auto timestamp = TimeUtil::GetCurrentTimestamp();
 			auto data = Data::Make((char*)packet.data(), packet.size());
 			m_Listener(data, frame_index, saved_is_key_frame);
 		}

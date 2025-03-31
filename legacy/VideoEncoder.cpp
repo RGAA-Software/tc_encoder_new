@@ -27,7 +27,7 @@ void LegacyVideoEncoder::OnInitFailed() {
 }
 
 void LegacyVideoEncoder::CalculateFPS() {
-	auto current_time = TimeExt::GetCurrentTimestamp();
+	auto current_time = TimeUtil::GetCurrentTimestamp();
 	auto duration = current_time - last_update_time;
 	fps++;
 	if (duration > 1000) {

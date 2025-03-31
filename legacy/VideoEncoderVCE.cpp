@@ -1,7 +1,7 @@
 #include "VideoEncoderVCE.h"
 
 #include "tc_common_new/log.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "tc_common_new/data.h"
 #include "tc_encoder_new/encoder_config.h"
 #include "tc_common_new/image.h"
@@ -22,7 +22,7 @@
 const wchar_t* START_TIME_PROPERTY = L"StartTimeProperty";
 const wchar_t* FRAME_INDEX_PROPERTY = L"FrameIndexProperty";
 const wchar_t* IS_KEY_FRAME = L"IsKeyFrame";
-static uint64_t last_time = tc::TimeExt::GetCurrentTimestamp();
+static uint64_t last_time = tc::TimeUtil::GetCurrentTimestamp();
 static int fps = 0;
 
 namespace tc
@@ -293,7 +293,7 @@ namespace tc
 //
 //        // resize it.
 //        if (encoder_config_.frame_resize) {
-//            auto beg = TimeExt::GetCurrentTimestamp();
+//            auto beg = TimeUtil::GetCurrentTimestamp();
 //            if (!frame_render_ && d3d11_device_ && d3d11_device_context_) {
 //                frame_render_ = FrameRender::Make(d3d11_device_.Get(), d3d11_device_context_.Get());
 //                SIZE target_size = {encoder_config_.encode_width, encoder_config_.encode_height};
@@ -331,7 +331,7 @@ namespace tc
 //                CopyRawTexture(final_texture, resize_desc.Format, resize_desc.Height);
 //            }
 //
-//            auto end = TimeExt::GetCurrentTimestamp();
+//            auto end = TimeUtil::GetCurrentTimestamp();
 //            auto diff = end - beg;
 //            EncodeTexture(final_texture, encoder_config_.encode_width, encoder_config_.encode_height, frame_index);
 //        } else {
@@ -440,7 +440,7 @@ namespace tc
         }
 
         fps++;
-        uint64_t ct = tc::TimeExt::GetCurrentTimestamp();
+        uint64_t ct = tc::TimeUtil::GetCurrentTimestamp();
         if (ct - last_time > 1000) {
             //LOGI("Recv FPS : {}", fps);
             last_time = ct;

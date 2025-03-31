@@ -11,7 +11,7 @@
 #include "tc_common_new/image.h"
 #include "tc_common_new/win32/d3d_debug_helper.h"
 #include "tc_common_new/file.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "tc_common_new/defer.h"
 
 #include <Winerror.h>
@@ -143,7 +143,7 @@ namespace tc
     }
 
 //    void FFmpegVideoEncoder::Encode(uint64_t handle, uint64_t frame_index) {
-//        auto beg = TimeExt::GetCurrentTimestamp();
+//        auto beg = TimeUtil::GetCurrentTimestamp();
 //        ComPtr<ID3D11Texture2D> shared_texture;
 //        shared_texture = OpenSharedTexture(reinterpret_cast<HANDLE>(handle));
 //        if (!shared_texture) {
@@ -199,7 +199,7 @@ namespace tc
 //        } else {
 //            libyuv::ARGBToI420(mapped_rect.pBits, mapped_rect.Pitch, y, width, u, uv_stride, v, uv_stride, width, height);
 //        }
-//        //LOGI("Map & convert: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+//        //LOGI("Map & convert: {}ms", (TimeUtil::GetCurrentTimestamp()-beg));
 //
 //        // Copy YUV
 //        {
@@ -207,10 +207,10 @@ namespace tc
 //            raw_image_yuv_ = Image::Make(capture_data_, desc.Width, desc.Height, RawImageType::kI420);
 //        }
 //
-//        beg = TimeExt::GetCurrentTimestamp();
+//        beg = TimeUtil::GetCurrentTimestamp();
 //        auto image = Image::Make(capture_data_, width, height, 3);
 //        this->Encode(image, frame_index);
-//        //LOGI("Encode: {}ms", (TimeExt::GetCurrentTimestamp()-beg));
+//        //LOGI("Encode: {}ms", (TimeUtil::GetCurrentTimestamp()-beg));
 //    }
 
     void FFmpegVideoEncoder::Exit() {

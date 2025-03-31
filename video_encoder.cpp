@@ -12,7 +12,7 @@
 #include "tc_common_new/data.h"
 #include "tc_common_new/image.h"
 #include "tc_common_new/thread.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "libyuv/convert.h"
 
 namespace tc

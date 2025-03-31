@@ -4,7 +4,7 @@
 #include "tc_common_new/log.h"
 #include "frame_render/FrameRender.h"
 #include "tc_common_new/win32/d3d_debug_helper.h"
-#include "tc_common_new/time_ext.h"
+#include "tc_common_new/time_util.h"
 #include "tc_common_new/thread.h"
 #include "tc_common_new/defer.h"
 
@@ -35,7 +35,7 @@ namespace tc
 //        D3D11_TEXTURE2D_DESC desc;
 //        shared_texture->GetDesc(&desc);
 //        if (encoder_config_.frame_resize) {
-//            auto beg = TimeExt::GetCurrentTimestamp();
+//            auto beg = TimeUtil::GetCurrentTimestamp();
 //            if (!frame_render_ && d3d11_device_ && d3d11_device_context_) {
 //                frame_render_ = FrameRender::Make(d3d11_device_.Get(), d3d11_device_context_.Get());
 //                SIZE target_size = {encoder_config_.encode_width, encoder_config_.encode_height};
