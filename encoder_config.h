@@ -92,8 +92,5 @@ namespace tc
         int target_quality = -1;
 
         int64_t adapter_uid_ = -1;
-
-        Microsoft::WRL::ComPtr<ID3D11Device> d3d11_device_ = nullptr;
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> d3d11_device_context_ = nullptr;
     };
 }
