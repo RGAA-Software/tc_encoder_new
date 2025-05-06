@@ -2,6 +2,7 @@
 
 #include <wrl/client.h>
 #include <d3d11.h>
+#include "tc_common_new/image.h"
 
 namespace tc
 {
@@ -92,5 +93,8 @@ namespace tc
         int target_quality = -1;
 
         int64_t adapter_uid_ = -1;
+
+        // 是否启用全彩模式: 如果启用全彩模式, 则编码输出的帧可以解码为yuv444, 否则为yuv420
+        bool enable_full_color_mode_ = false;
     };
 }
