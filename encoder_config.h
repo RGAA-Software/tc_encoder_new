@@ -66,8 +66,8 @@ namespace tc
 
         // nvidia qp set, -1 表示不启用， 如果启用了 const_qp，就不要设置maxqp与minqp了，const_qp 要求编码模式不能为vbr
         int const_qp = -1;
-        int max_qp = -1;
-        int min_qp = -1;
+        int max_qp = 36;
+        int min_qp = 22;
 
         // nvidia quality preset (1-7),随着从 P1 到 P7 的转变，性能下降而质量提高
         uint8_t quality_preset = 1;
