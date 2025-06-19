@@ -4,7 +4,7 @@
 
 #include <fstream>
 #include "video_encoder.h"
-#include "tc_common_new/string_ext.h"
+#include "tc_common_new/string_util.h"
 #include "tc_common_new/message_notifier.h"
 #include "tc_encoder_new/encoder_messages.h"
 #include "tc_common_new/log.h"
@@ -44,7 +44,7 @@ namespace tc
             adapter->GetDesc(&desc);
             if (encoder_feature_.adapter_uid_ == desc.AdapterLuid.LowPart) {
                 found_adapter = true;
-                LOGI("Adapter Index:{} Name: {}", adapter_index, StringExt::ToUTF8(desc.Description).c_str());
+                LOGI("Adapter Index:{} Name: {}", adapter_index, StringUtil::ToUTF8(desc.Description).c_str());
                 LOGI("find adapter");
                 break;
             }
@@ -181,7 +181,7 @@ namespace tc
 //            createDesc.Usage = D3D11_USAGE_STAGING;
 //            hres = curDevice->CreateTexture2D(&createDesc, NULL, texture2d_.GetAddressOf());
 //            if (FAILED(hres)) {
-//                LOGE("desktop capture create texture failed with:{}", StringExt::GetErrorStr(hres).c_str());
+//                LOGE("desktop capture create texture failed with:{}", StringUtil::GetErrorStr(hres).c_str());
 //                return false;
 //            }
 //        }
