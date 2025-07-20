@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 #find_package(libyuv CONFIG REQUIRED)
 #find_package(FFMPEG REQUIRED)
 
-set(FFMPEG_LIB_PATH ${CMAKE_SOURCE_DIR}/deps/tc_3rdparty/ffmpeg/lib/x64)
-include_directories(${CMAKE_SOURCE_DIR}/deps/tc_3rdparty/ffmpeg/include)
+set(FFMPEG_LIB_PATH ${GR_PROJECT_PATH}/deps/tc_3rdparty/ffmpeg/lib/x64)
+include_directories(${GR_PROJECT_PATH}/deps/tc_3rdparty/ffmpeg/include)
 link_directories(${FFMPEG_LIB_PATH})
 
 set(NVSDK_VERSION
