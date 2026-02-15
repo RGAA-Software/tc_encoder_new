@@ -17,7 +17,7 @@
 #define DEBUG_FILE 0
 
 #define AMF_LOG_ERR_IF(expr) {AMF_RESULT res = expr;\
-    if(res != AMF_OK){LOGE("ERROR: {}", res);}}
+    if(res != AMF_OK){LOGE("ERROR: {}", (int)res);}}
 
 const wchar_t* START_TIME_PROPERTY = L"StartTimeProperty";
 const wchar_t* FRAME_INDEX_PROPERTY = L"FrameIndexProperty";
@@ -50,7 +50,7 @@ namespace tc
         // Create encoder component.
         auto ret = g_AMFFactory.GetFactory()->CreateComponent(amfContext, pCodec, &amf_encoder_);
         if (ret != AMF_OK) {
-            LOGE("CreateComponent failed: {}", ret);
+            LOGE("CreateComponent failed: {}", (int)ret);
             return;
         }
 
@@ -79,7 +79,7 @@ namespace tc
 
         ret = amf_encoder_->Init(inputFormat, config.width, config.height);
         if (ret != AMF_OK) {
-            LOGE("!!! AMF encoder init failed: {}, {}x{}, format: {}", ret, config.width, config.height, inputFormat);
+            LOGE("!!! AMF encoder init failed: {}, {}x{}, format: {}", (int)ret, config.width, config.height, (int)inputFormat);
             return;
         }
 

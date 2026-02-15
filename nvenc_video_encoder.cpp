@@ -124,7 +124,7 @@ namespace tc
             nv_encoder_ = std::make_shared<NvEncoderD3D11>(d3d11_device_.Get(), input_frame_width_, input_frame_height_, format, 0);
         } catch (const NVENCException& e) {
             nv_encoder_ = nullptr;
-            LOGI("NVENC NvEncoderD3D11 failed: {} => {}", e.getErrorCode(), e.what());
+            LOGI("NVENC NvEncoderD3D11 failed: {} => {}", (int)e.getErrorCode(), e.what());
             return false;
         }
         NV_ENC_INITIALIZE_PARAMS initializeParams = {NV_ENC_INITIALIZE_PARAMS_VER};
@@ -140,7 +140,7 @@ namespace tc
         try {
             nv_encoder_->CreateEncoder(&initializeParams);
         } catch (const NVENCException& e) {
-            LOGI("Config failed: {} => {}", e.getErrorCode(), e.what());
+            LOGI("Config failed: {} => {}", (int)e.getErrorCode(), e.what());
             return false;
         }
         LOGI("NVENC init success.");
